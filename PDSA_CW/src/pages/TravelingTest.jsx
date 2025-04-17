@@ -4,16 +4,16 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 
 // City data with coordinates
 const CITY_DATA = [
-  { id: 1, name: "Astra A", position: [0, 0, 0] }, // center
-  { id: 2, name: "Bravo B", position: [15, 0, 0] }, // 0°
-  { id: 3, name: "Cora C", position: [11.49, 0, 9.64] }, // 40°
-  { id: 4, name: "Delta D", position: [4.59, 0, 14.31] }, // 80°
-  { id: 5, name: "Eyla E", position: [-4.59, 0, 14.31] }, // 120°
-  { id: 6, name: "Fira F", position: [-11.49, 0, 9.64] }, // 160°
-  { id: 7, name: "Gala G", position: [-15, 0, 0] }, // 200°
-  { id: 8, name: "Hira H", position: [-11.49, 0, -9.64] }, // 240°
-  { id: 9, name: "Iron I", position: [-4.59, 0, -14.31] }, // 280°
-  { id: 10, name: "Juna J", position: [4.59, 0, -14.31] }, // 320°
+  { id: 1, name: "Astra A", position: [25, 0, 0] }, // 0°
+  { id: 2, name: "Bravo B", position: [20.23, 0, 14.69] }, // 36°
+  { id: 3, name: "Cora C", position: [7.73, 0, 23.78] }, // 72°
+  { id: 4, name: "Delta D", position: [-7.73, 0, 23.78] }, // 108°
+  { id: 5, name: "Eyla E", position: [-20.23, 0, 14.69] }, // 144°
+  { id: 6, name: "Fira F", position: [-25, 0, 0] }, // 180°
+  { id: 7, name: "Gala G", position: [-20.23, 0, -14.69] }, // 216°
+  { id: 8, name: "Hira H", position: [-7.73, 0, -23.78] }, // 252°
+  { id: 9, name: "Iron I", position: [7.73, 0, -23.78] }, // 288°
+  { id: 10, name: "Juna J", position: [20.23, 0, -14.69] }, // 324°
 ];
 
 
@@ -38,6 +38,8 @@ export default function TravelingSalesmanProblem() {
   const pathLinesRef = useRef({});
   const activePathsRef = useRef([]);
   const animationFrameRef = useRef(null);
+  const homeCityRef = useRef(null);
+  const selectedCitiesRef = useRef([]);
 
   // Initialize Three.js scene - now with proper cleanup and reinitialization
   useEffect(() => {
@@ -138,6 +140,11 @@ export default function TravelingSalesmanProblem() {
     cameraRef.current = null;
   };
   
+  useEffect(() => {
+    homeCityRef.current = homeCity;
+    selectedCitiesRef.current = selectedCities;
+  }, [homeCity, selectedCities]);
+
   // Function to handle click events on the renderer
   const handleClick = (event) => {
     // Calculate mouse position in normalized device coordinates
@@ -148,17 +155,27 @@ export default function TravelingSalesmanProblem() {
     // Update the picking ray with the camera and mouse position
     raycasterRef.current.setFromCamera(mouseRef.current, cameraRef.current);
     
-    // Find all intersected objects - this time we need to check for recursive children
+    // Find all intersected objects - check for recursive children
     const intersects = raycasterRef.current.intersectObjects(sceneRef.current.children, true);
     
     // Check if we hit a city
-    for (let i = 0; i < intersects.length; i++) {
-      const object = intersects[i].object;
-      
-      if (object.userData && object.userData.type === 'station') {
-        const cityId = object.userData.cityId;
-        handleCitySelect(cityId);
-        break;
+    if (intersects.length > 0) {
+      // Look for the first object that has cityId in userData
+      for (let i = 0; i < intersects.length; i++) {
+        const object = intersects[i].object;
+        
+        // Check if the object or any parent has the cityId
+        let currentObj = object;
+        while (currentObj) {
+          if (currentObj.userData && currentObj.userData.type === 'station' && currentObj.userData.cityId) {
+            const cityId = currentObj.userData.cityId;
+            console.log("Selected city ID:", cityId);
+            handleCitySelectWithRefs(cityId);
+            return; // Exit after handling the first valid city
+          }
+          // Move up to parent if available
+          currentObj = currentObj.parent;
+        }
       }
     }
   };
@@ -341,21 +358,34 @@ export default function TravelingSalesmanProblem() {
       cityLabelsRef.current[city.id] = cityLabelDiv;
     });
     
-    // Generate random distances between cities and create paths immediately
+    // Generate symmetric distances between cities and create paths immediately
     const newDistances = {};
-    CITY_DATA.forEach(city1 => {
-      newDistances[city1.id] = {};
-      CITY_DATA.forEach(city2 => {
+    
+    // Initialize the distance matrix
+    CITY_DATA.forEach(city => {
+      newDistances[city.id] = {};
+    });
+    
+    // Fill distance matrix with symmetric distances
+    for (let i = 0; i < CITY_DATA.length; i++) {
+      const city1 = CITY_DATA[i];
+      
+      for (let j = i + 1; j < CITY_DATA.length; j++) {
+        const city2 = CITY_DATA[j];
+        
         if (city1.id !== city2.id) {
-          // Random distance between 50 and 100
+          // Generate one random distance for this pair
           const distance = Math.floor(Math.random() * 51) + 50;
+          
+          // Set the same distance for both directions
           newDistances[city1.id][city2.id] = distance;
+          newDistances[city2.id][city1.id] = distance;
           
           // Create path between cities with distance label visible from start
           createPath(city1.id, city2.id, distance, 0x303060, true);
         }
-      });
-    });
+      }
+    }
     
     setDistances(newDistances);
     
@@ -618,18 +648,15 @@ export default function TravelingSalesmanProblem() {
       // Find existing path
       const pathKey = `${Math.min(cityId1, cityId2)}-${Math.max(cityId1, cityId2)}`;
       const existingPath = pathLinesRef.current[pathKey];
-      
       if (existingPath) {
         // Highlight existing path
         existingPath.material.color.set(color);
-        existingPath.material.opacity = 1.0;
-        
+        existingPath.material.opacity = 1.0; 
         // Create animated path overlay - using cyan now
         const points = [
           new THREE.Vector3(...city1.position),
           new THREE.Vector3(...city2.position)
         ];
-        
         const lineGeometry = new THREE.BufferGeometry().setFromPoints(points);
         const lineMaterial = new THREE.LineBasicMaterial({ 
           color: 0x00ffff, // Cyan color
@@ -638,28 +665,51 @@ export default function TravelingSalesmanProblem() {
           linewidth: 2
         });
         const line = new THREE.Line(lineGeometry, lineMaterial);
-        
         sceneRef.current.add(line);
         activePathsRef.current.push(line);
       }
     }
   };
-  
-  // Handle city selection from both 3D model and UI buttons
-  const handleCitySelect = (cityId) => {
+
+  const handleCitySelectWithRefs = (cityId) => {
+    // Convert to number if it's a string to ensure consistent comparison
     cityId = Number(cityId);
     
-    if (!homeCity) {
-      // Set as home city if none selected
+    console.log("Current state from refs:", {
+      homeCity: homeCityRef.current,
+      selectedCities: [...selectedCitiesRef.current]
+    });
+    
+    // Case 1: No home city selected yet - set as home
+    if (homeCityRef.current === null) {
+      console.log("Setting home city:", cityId);
       setHomeCity(cityId);
-    } else if (cityId === homeCity) {
-      // If re-clicking home city, reset it to allow re-selecting
+      return;
+    }
+    
+    // Case 2: Clicking on home city again - reset everything
+    if (cityId === homeCityRef.current) {
+      console.log("Clicked on home city, resetting");
       setHomeCity(null);
       setSelectedCities([]);
-    } else if (!selectedCities.includes(cityId)) {
-      // Add to selected cities if not already selected and not home
-      setSelectedCities([...selectedCities, cityId]);
+      return;
     }
+    
+    // Case 3: City already in sequence - remove it and all cities after it
+    const existingIndex = selectedCitiesRef.current.indexOf(cityId);
+    if (existingIndex !== -1) {
+      console.log("City already in sequence, removing it and subsequent cities");
+      setSelectedCities(selectedCitiesRef.current.slice(0, existingIndex));
+      return;
+    }
+    
+    // Case 4: Add new city to the sequence
+    console.log("Adding city to sequence:", cityId);
+    setSelectedCities([...selectedCitiesRef.current, cityId]);
+  };
+
+  const handleCitySelect = (cityId) => {
+    handleCitySelectWithRefs(cityId);
   };
   
   // Reset selections
@@ -671,10 +721,8 @@ export default function TravelingSalesmanProblem() {
   return (
     <div className="relative w-full h-screen bg-black text-cyan-300">
       <div ref={mountRef} className="w-full h-full"></div>
-      
       <div className="absolute top-4 left-4 bg-black bg-opacity-80 p-4 rounded shadow-lg border border-cyan-500 z-20">
         <h2 className="text-xl font-bold mb-2 text-cyan-300">Space Transport Network</h2>
-        
         <div className="mb-4 text-cyan-100">
           <p className="font-semibold mb-1">
             Home Station: {homeCity ? cityObjectsRef.current[homeCity]?.name : 'Not Selected'}
@@ -686,7 +734,6 @@ export default function TravelingSalesmanProblem() {
             Total Distance: {totalDistance} km
           </p>
         </div>
-        
         <div className="mb-4">
           <p className="text-sm italic mb-2 text-cyan-200">
             {!homeCity 
@@ -700,7 +747,6 @@ export default function TravelingSalesmanProblem() {
             Reset
           </button>
         </div>
-        
         <div className="mt-4">
           <h3 className="font-semibold mb-2 text-cyan-300">Available Stations:</h3>
           <div className="grid grid-cols-2 gap-2">
@@ -722,7 +768,6 @@ export default function TravelingSalesmanProblem() {
           </div>
         </div>
       </div>
-      
       {selectedCities.length > 0 && homeCity && (
         <div className="absolute bottom-4 right-4 bg-black bg-opacity-80 p-4 rounded shadow-lg max-w-md border border-cyan-500 z-20">
           <h3 className="font-semibold mb-2 text-cyan-300">Route Details:</h3>
