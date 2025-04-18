@@ -718,6 +718,62 @@ export default function TravelingSalesmanProblem() {
     setSelectedCities([]);
   };
   
+  //Solve the TSP problem
+  const handleSolve = async () => {
+    if (!homeCity || selectedCities.length === 0) {
+      alert('Please select a home city and at least one destination.');
+      return;
+    }
+    
+    try {
+      // Prepare data for the backend
+      const tspData = {
+        homeCity: {
+          id: homeCity,
+          name: cityObjectsRef.current[homeCity]?.name,
+          position: cityObjectsRef.current[homeCity]?.position
+        },
+        selectedCities: selectedCities.map(cityId => ({
+          id: cityId,
+          name: cityObjectsRef.current[cityId]?.name,
+          position: cityObjectsRef.current[cityId]?.position
+        })),
+        distances: distances,
+        totalDistance: totalDistance
+      };
+      
+      console.log("Request data", tspData);
+      // Send data to backend
+      const response = await fetch("http://localhost:8081/pdsa/solve", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(tspData),
+      });
+
+      const result = await response.json();
+
+      console.log('Backend response:', result);
+      
+      // Here you can process the response from the backend
+      // For example, if the backend returns an optimized route
+      if (result.optimizedRoute) {
+        // Update your route with the optimized sequence
+        setSelectedCities(result.optimizedRoute.map(city => city.id));
+      }
+      
+      if (result.optimizedDistance) {
+        // Display the optimized distance
+        alert(`Optimized route found! Distance: ${result.optimizedDistance} km`);
+      }
+      
+    } catch (error) {
+      console.error('Failed to solve TSP:', error);
+      alert('Failed to communicate with the server. Please try again.');
+    }
+  };
+
   return (
     <div className="relative w-full h-screen bg-black text-cyan-300">
       <div ref={mountRef} className="w-full h-full"></div>
@@ -742,9 +798,15 @@ export default function TravelingSalesmanProblem() {
           </p>
           <button 
             onClick={handleReset}
-            className="bg-red-900 text-white px-3 py-1 rounded hover:bg-red-700 transition-colors"
+            className="bg-red-900 text-white px-3 py-1 w-[30%] rounded hover:bg-red-700 transition-colors"
           >
             Reset
+          </button>
+          <button 
+            onClick={handleSolve}
+            className="bg-blue-900 text-white px-3 py-1 w-[30%] rounded ml-4 hover:bg-blue-700 transition-colors"
+          >
+            Solve
           </button>
         </div>
         <div className="mt-4">
