@@ -12,8 +12,8 @@ public class PerformanceMetric {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name="metric_id")
     private int metricId;
-    @Column(name="session_id")
-    private int sessionId;
+    @Column(name="result_id")
+    private int resultId;
     @Column(name="algorithm_id")
     private int algorithmId;
     @Column(name="execution_time_ms")
@@ -25,6 +25,7 @@ public class PerformanceMetric {
     private LocalDateTime createdAt;
 
     //getters and setters
+
     public int getMetricId() {
         return metricId;
     }
@@ -33,12 +34,12 @@ public class PerformanceMetric {
         this.metricId = metricId;
     }
 
-    public int getSessionId() {
-        return sessionId;
+    public int getResultId() {
+        return resultId;
     }
 
-    public void setSessionId(int sessionId) {
-        this.sessionId = sessionId;
+    public void setResultId(int resultId) {
+        this.resultId = resultId;
     }
 
     public int getAlgorithmId() {
