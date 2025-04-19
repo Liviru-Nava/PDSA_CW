@@ -12,14 +12,10 @@ public class GameResult {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name="result_id")
     private int resultId;
-    @Column(name="session_id")
-    private int sessionId;
+    @Column(name="game_id")
+    private int gameId;
     @Column(name="player_id")
     private int playerId;
-    @Column(name="is_winner")
-    private int isWinner;
-    @Column(name="score")
-    private int score;
     @Column(name="completion_time_seconds")
     private int completionTimeSeconds;
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd HH:mm:ss")
@@ -27,6 +23,7 @@ public class GameResult {
     private LocalDateTime createdAt;
 
     //getters and setters
+
     public int getResultId() {
         return resultId;
     }
@@ -35,12 +32,12 @@ public class GameResult {
         this.resultId = resultId;
     }
 
-    public int getSessionId() {
-        return sessionId;
+    public int getGameId() {
+        return gameId;
     }
 
-    public void setSessionId(int sessionId) {
-        this.sessionId = sessionId;
+    public void setGameId(int gameId) {
+        this.gameId = gameId;
     }
 
     public int getPlayerId() {
@@ -49,22 +46,6 @@ public class GameResult {
 
     public void setPlayerId(int playerId) {
         this.playerId = playerId;
-    }
-
-    public int getIsWinner() {
-        return isWinner;
-    }
-
-    public void setIsWinner(int isWinner) {
-        this.isWinner = isWinner;
-    }
-
-    public int getScore() {
-        return score;
-    }
-
-    public void setScore(int score) {
-        this.score = score;
     }
 
     public int getCompletionTimeSeconds() {
