@@ -27,6 +27,21 @@ export default function TravelingSalesmanProblem() {
   //solutions
   const [optimalSolution, setOptimalSolution] = useState(null);
   const [showOptimal, setShowOptimal] = useState(false);
+
+  //winner or not
+  const [playerName, setPlayerName] = useState("Space Traveler");
+  const [currentRound, setCurrentRound] = useState(1);
+  const [gameStatus, setGameStatus] = useState(null); // null, 'won', 'lost'
+  const [showGameStatusPopup, setShowGameStatusPopup] = useState(false);
+
+  const [roundDots, setRoundDots] = useState(".");
+  useEffect(() => {
+    const dotsInterval = setInterval(() => {
+      setRoundDots(dots => dots.length < 3 ? dots + "." : ".");
+    }, 500);
+    
+    return () => clearInterval(dotsInterval);
+  }, []);
   
   const cityLabelsRef = useRef({});
   const distanceLabelsRef = useRef({});
@@ -803,6 +818,24 @@ export default function TravelingSalesmanProblem() {
       if (result.bestSolution) {
         setOptimalSolution(result.bestSolution);
         setShowOptimal(true);
+
+        // Check if player found the optimal solution
+        const optimalDistance = result.bestSolution.totalDistance;
+        
+        // Sort the optimal route for easier comparison
+        const optimalRouteIds = result.bestSolution.optimizedRoute.map(city => city.id);
+        
+        // Determine if player's route is optimal
+        const didFindOptimalPath = optimalDistance === totalDistance;
+        
+        // Set game status based on result
+        setGameStatus(didFindOptimalPath ? 'won' : 'lost');
+        
+        // Show the popup for the win scenario
+        if (didFindOptimalPath) {
+          setShowGameStatusPopup(true);
+        }
+        
       }
       
     } catch (error) {
@@ -813,6 +846,57 @@ export default function TravelingSalesmanProblem() {
 
   const togglePathDisplay = () => {
     setShowOptimal(!showOptimal);
+  };
+
+  const handlePlayAgain = () => {
+    // Reset game state
+    setHomeCity(null);
+    setSelectedCities([]);
+    setOptimalSolution(null);
+    setShowOptimal(false);
+    setGameStatus(null);
+    setShowGameStatusPopup(false);
+    setCurrentRound(prevRound => prevRound + 1);
+    
+    // Generate new random distances
+    const newDistances = {};
+    
+    // Initialize the distance matrix
+    CITY_DATA.forEach(city => {
+      newDistances[city.id] = {};
+    });
+    
+    // Fill distance matrix with new symmetric distances
+    for (let i = 0; i < CITY_DATA.length; i++) {
+      const city1 = CITY_DATA[i];
+      
+      for (let j = i + 1; j < CITY_DATA.length; j++) {
+        const city2 = CITY_DATA[j];
+        
+        if (city1.id !== city2.id) {
+          // Generate one random distance for this pair
+          const distance = Math.floor(Math.random() * 51) + 50;
+          
+          // Set the same distance for both directions
+          newDistances[city1.id][city2.id] = distance;
+          newDistances[city2.id][city1.id] = distance;
+          
+          // Update visual path
+          const pathKey = `${Math.min(city1.id, city2.id)}-${Math.max(city1.id, city2.id)}`;
+          if (pathLinesRef.current[pathKey]) {
+            pathLinesRef.current[pathKey].material.color.set(0x303060);
+            pathLinesRef.current[pathKey].material.opacity = 0.5;
+          }
+          
+          // Update label if it exists
+          if (distanceLabelsRef.current[pathKey]) {
+            distanceLabelsRef.current[pathKey].textContent = `${distance} km`;
+          }
+        }
+      }
+    }
+    
+    setDistances(newDistances);
   };
 
   return (
@@ -964,6 +1048,46 @@ export default function TravelingSalesmanProblem() {
           </div>
         )}
       </div>
+
+      {/* Player and Round display */}
+      <div className="absolute top-4 right-4 bg-black bg-opacity-80 p-4 rounded shadow-lg border border-cyan-500 z-20 text-right">
+        <h3 className="font-bold text-cyan-300 mb-1 text-xl font-alien">{playerName}</h3>
+        <div className="text-cyan-300 font-bold font-alien">
+          Round {currentRound}{roundDots}
+        </div>
+        
+        {/* Game result display */}
+        {gameStatus === 'lost' && (
+          <div className="mt-3 pt-3 border-t border-red-500">
+            <p className="text-red-400 mb-2 font-bold">You didn't find the optimal solution!</p>
+            <button 
+              onClick={handlePlayAgain}
+              className="bg-red-800 text-white px-4 py-2 rounded hover:bg-red-700 transition-colors w-full"
+            >
+              Play Again
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Victory popup */}
+      {showGameStatusPopup && gameStatus === 'won' && (
+        <div className="fixed inset-0 flex items-center justify-center z-50">
+          <div className="absolute inset-0 bg-black bg-opacity-70"></div>
+          <div className="bg-gradient-to-r from-blue-900 to-purple-900 p-8 rounded-lg border-2 border-cyan-400 shadow-lg shadow-cyan-500/50 z-50 text-center max-w-md transform scale-110 animate-pulse">
+            <h2 className="text-3xl text-cyan-300 font-bold mb-4 font-alien">CONGRATULATIONS!</h2>
+            <p className="text-xl text-white mb-6">You've found the optimal interstellar route!</p>
+            <div className="flex justify-center">
+              <button 
+                onClick={handlePlayAgain}
+                className="bg-gradient-to-r from-cyan-600 to-blue-700 text-white px-6 py-3 rounded-lg hover:from-cyan-500 hover:to-blue-600 transition-all font-bold text-lg"
+              >
+                Next Mission
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
