@@ -23,6 +23,10 @@ export default function TravelingSalesmanProblem() {
   const [distances, setDistances] = useState({});
   const [totalDistance, setTotalDistance] = useState(0);
   const [sceneInitialized, setSceneInitialized] = useState(false);
+
+  //solutions
+  const [optimalSolution, setOptimalSolution] = useState(null);
+  const [showOptimal, setShowOptimal] = useState(false);
   
   const cityLabelsRef = useRef({});
   const distanceLabelsRef = useRef({});
@@ -574,31 +578,73 @@ export default function TravelingSalesmanProblem() {
     });
     activePathsRef.current = [];
     
-    // Highlight selected cities
-    selectedCities.forEach(cityId => {
-      const cityObj = cityObjectsRef.current[cityId];
-      if (cityObj && cityObj.model) {
-        // Highlight main module with neon green
-        cityObj.model.children[0].material.color.set(0x00ff40);
-        cityObj.model.children[0].material.emissive.set(0x00ff00); 
-        cityObj.model.children[0].material.emissiveIntensity = 0.8;
+    if (showOptimal && optimalSolution) {
+      // Render optimal solution path
+      const route = optimalSolution.optimizedRoute.map(city => city.id);
+      
+      // Highlight stations in optimal route
+      route.forEach(cityId => {
+        const cityObj = cityObjectsRef.current[cityId];
+        if (cityObj && cityObj.model) {
+          // Highlight with purple color for optimal path
+          cityObj.model.children[0].material.color.set(0xcc00ff);
+          cityObj.model.children[0].material.emissive.set(0xcc00ff);
+          cityObj.model.children[0].material.emissiveIntensity = 1.0;
+        }
+      });
+      
+      // Highlight home city
+      if (homeCity) {
+        const homeCityObj = cityObjectsRef.current[homeCity];
+        if (homeCityObj && homeCityObj.model) {
+          // Highlight main module with neon red
+          homeCityObj.model.children[0].material.color.set(0xff2000);
+          homeCityObj.model.children[0].material.emissive.set(0xff0000);
+          homeCityObj.model.children[0].material.emissiveIntensity = 0.8;
+        }
       }
-    });
-    
-    // Highlight home city
-    if (homeCity) {
-      const homeCityObj = cityObjectsRef.current[homeCity];
-      if (homeCityObj && homeCityObj.model) {
-        // Highlight main module with neon red
-        homeCityObj.model.children[0].material.color.set(0xff2000);
-        homeCityObj.model.children[0].material.emissive.set(0xff0000);
-        homeCityObj.model.children[0].material.emissiveIntensity = 0.8;
+      
+      // Draw path from home to first city in route
+      if (route.length > 0) {
+        highlightPath(homeCity, route[0], 0xff00cc);
       }
-    }
-    
-    // Draw active paths if we have both home city and selected cities
-    if (homeCity) {
-      if (selectedCities.length > 0) {
+      
+      // Draw paths between cities in the route
+      for (let i = 0; i < route.length - 1; i++) {
+        highlightPath(route[i], route[i + 1], 0xff00cc);
+      }
+      
+      // Draw path from last city back to home
+      if (route.length > 0) {
+        highlightPath(route[route.length - 1], homeCity, 0xff00cc);
+      }
+      
+    } else {
+      // Original user path rendering
+      // Highlight selected cities
+      selectedCities.forEach(cityId => {
+        const cityObj = cityObjectsRef.current[cityId];
+        if (cityObj && cityObj.model) {
+          // Highlight main module with neon green
+          cityObj.model.children[0].material.color.set(0x00ff40);
+          cityObj.model.children[0].material.emissive.set(0x00ff00); 
+          cityObj.model.children[0].material.emissiveIntensity = 0.8;
+        }
+      });
+      
+      // Highlight home city
+      if (homeCity) {
+        const homeCityObj = cityObjectsRef.current[homeCity];
+        if (homeCityObj && homeCityObj.model) {
+          // Highlight main module with neon red
+          homeCityObj.model.children[0].material.color.set(0xff2000);
+          homeCityObj.model.children[0].material.emissive.set(0xff0000);
+          homeCityObj.model.children[0].material.emissiveIntensity = 0.8;
+        }
+      }
+      
+      // Draw active paths if we have both home city and selected cities
+      if (homeCity && selectedCities.length > 0) {
         // Path from home to first selected city
         highlightPath(homeCity, selectedCities[0], 0x00ffff);
         
@@ -608,34 +654,31 @@ export default function TravelingSalesmanProblem() {
         }
         
         // Path from last city back to home
-        if (selectedCities.length > 0) {
-          highlightPath(selectedCities[selectedCities.length - 1], homeCity, 0x00ffff);
-        }
-        
-        // Calculate total distance
-        let total = 0;
-        
-        // Distance from home to first city
-        if (selectedCities.length > 0) {
-          total += distances[homeCity]?.[selectedCities[0]] || 0;
-        }
-        
-        // Distance between selected cities
-        for (let i = 0; i < selectedCities.length - 1; i++) {
-          total += distances[selectedCities[i]]?.[selectedCities[i + 1]] || 0;
-        }
-        
-        // Distance from last city back to home
-        if (selectedCities.length > 0) {
-          total += distances[selectedCities[selectedCities.length - 1]]?.[homeCity] || 0;
-        }
-        
-        setTotalDistance(total);
-      } else {
-        setTotalDistance(0);
+        highlightPath(selectedCities[selectedCities.length - 1], homeCity, 0x00ffff);
       }
     }
-  }, [homeCity, selectedCities, distances, sceneInitialized]);
+    
+    // Calculate and set the total distance
+    let total = 0;
+    
+    if (showOptimal && optimalSolution) {
+      total = optimalSolution.totalDistance;
+    } else if (homeCity && selectedCities.length > 0) {
+      // Distance from home to first city
+      total += distances[homeCity]?.[selectedCities[0]] || 0;
+      
+      // Distance between selected cities
+      for (let i = 0; i < selectedCities.length - 1; i++) {
+        total += distances[selectedCities[i]]?.[selectedCities[i + 1]] || 0;
+      }
+      
+      // Distance from last city back to home
+      total += distances[selectedCities[selectedCities.length - 1]]?.[homeCity] || 0;
+    }
+    
+    setTotalDistance(total);
+    
+  }, [homeCity, selectedCities, distances, sceneInitialized, showOptimal, optimalSolution]);
   
   // Highlight path between cities
   const highlightPath = (cityId1, cityId2, color) => {
@@ -756,16 +799,10 @@ export default function TravelingSalesmanProblem() {
 
       console.log('Backend response:', result);
       
-      // Here you can process the response from the backend
-      // For example, if the backend returns an optimized route
-      if (result.optimizedRoute) {
-        // Update your route with the optimized sequence
-        setSelectedCities(result.optimizedRoute.map(city => city.id));
-      }
-      
-      if (result.optimizedDistance) {
-        // Display the optimized distance
-        alert(`Optimized route found! Distance: ${result.optimizedDistance} km`);
+      // Store the optimal solution
+      if (result.bestSolution) {
+        setOptimalSolution(result.bestSolution);
+        setShowOptimal(true);
       }
       
     } catch (error) {
@@ -774,11 +811,19 @@ export default function TravelingSalesmanProblem() {
     }
   };
 
+  const togglePathDisplay = () => {
+    setShowOptimal(!showOptimal);
+  };
+
   return (
-    <div className="relative w-full h-screen bg-black text-cyan-300">
+    <div className="relative w-full h-screen bg-black text-cyan-300 overflow-hidden">
       <div ref={mountRef} className="w-full h-full"></div>
-      <div className="absolute top-4 left-4 bg-black bg-opacity-80 p-4 rounded shadow-lg border border-cyan-500 z-20">
+      
+      {/* Main Control Panel - adjusted with max-height and overflow handling */}
+      <div className="absolute top-4 left-4 bg-black bg-opacity-80 p-4 rounded shadow-lg border border-cyan-500 z-20 max-w-md max-h-[calc(100vh-32px)] flex flex-col overflow-hidden">
         <h2 className="text-xl font-bold mb-2 text-cyan-300">Space Transport Network</h2>
+        
+        {/* Stats Section */}
         <div className="mb-4 text-cyan-100">
           <p className="font-semibold mb-1">
             Home Station: {homeCity ? cityObjectsRef.current[homeCity]?.name : 'Not Selected'}
@@ -788,28 +833,51 @@ export default function TravelingSalesmanProblem() {
           </p>
           <p className="font-semibold">
             Total Distance: {totalDistance} km
+            {optimalSolution && (
+              <span className="text-xs ml-1">
+                ({showOptimal ? 'Optimal' : 'Your Path'})
+              </span>
+            )}
           </p>
         </div>
+        
+        {/* Instructions & Action Buttons */}
         <div className="mb-4">
           <p className="text-sm italic mb-2 text-cyan-200">
             {!homeCity 
               ? 'Click on a station to select it as your home base' 
               : 'Now click stations to add them to your route'}
           </p>
-          <button 
-            onClick={handleReset}
-            className="bg-red-900 text-white px-3 py-1 w-[30%] rounded hover:bg-red-700 transition-colors"
-          >
-            Reset
-          </button>
-          <button 
-            onClick={handleSolve}
-            className="bg-blue-900 text-white px-3 py-1 w-[30%] rounded ml-4 hover:bg-blue-700 transition-colors"
-          >
-            Solve
-          </button>
+          <div className="flex space-x-2">
+            <button 
+              onClick={handleReset}
+              className="bg-red-900 text-white px-3 py-1 flex-1 rounded hover:bg-red-700 transition-colors"
+            >
+              Reset
+            </button>
+            <button 
+              onClick={handleSolve}
+              className="bg-blue-900 text-white px-3 py-1 flex-1 rounded hover:bg-blue-700 transition-colors"
+            >
+              Solve
+            </button>
+            {optimalSolution && (
+              <button 
+                onClick={togglePathDisplay}
+                className={`px-3 py-1 rounded flex-1 ${
+                  showOptimal 
+                    ? 'bg-cyan-700 hover:bg-cyan-600 text-white' 
+                    : 'bg-purple-700 hover:bg-purple-600 text-white'
+                }`}
+              >
+                {showOptimal ? 'My Path' : 'Optimal'}
+              </button>
+            )}
+          </div>
         </div>
-        <div className="mt-4">
+        
+        {/* Station Selection Grid - with flex-shrink-0 to prevent unwanted shrinking */}
+        <div className="mb-4 flex-shrink-0">
           <h3 className="font-semibold mb-2 text-cyan-300">Available Stations:</h3>
           <div className="grid grid-cols-2 gap-2">
             {CITY_DATA.map(city => (
@@ -829,34 +897,72 @@ export default function TravelingSalesmanProblem() {
             ))}
           </div>
         </div>
-      </div>
-      {selectedCities.length > 0 && homeCity && (
-        <div className="absolute bottom-4 right-4 bg-black bg-opacity-80 p-4 rounded shadow-lg max-w-md border border-cyan-500 z-20">
-          <h3 className="font-semibold mb-2 text-cyan-300">Route Details:</h3>
-          <ul className="text-sm text-cyan-100">
-            <li>Start at {cityObjectsRef.current[homeCity]?.name}</li>
-            {selectedCities.map((cityId, index) => (
-              <li key={cityId} className="flex items-center">
-                <span className="text-cyan-400 mr-1">→</span> {cityObjectsRef.current[cityId]?.name} 
-                <span className="ml-1 bg-cyan-900 px-1 rounded text-xs">
-                  ({index === 0 
-                    ? distances[homeCity]?.[cityId] 
-                    : distances[selectedCities[index-1]]?.[cityId]} km)
-                </span>
-              </li>
-            ))}
-            <li className="flex items-center">
-              <span className="text-cyan-400 mr-1">→</span> Return to {cityObjectsRef.current[homeCity]?.name} 
-              <span className="ml-1 bg-cyan-900 px-1 rounded text-xs">
-                ({distances[selectedCities[selectedCities.length-1]]?.[homeCity]} km)
-              </span>
-            </li>
-          </ul>
-        </div>
-      )}
-      
-      <div className="absolute bottom-4 left-4 text-sm text-white bg-black bg-opacity-70 p-2 rounded z-20">
-        Click directly on space stations or use buttons to select them
+        
+        {/* Unified Route Details Section - made to expand within available space */}
+        {(selectedCities.length > 0 || optimalSolution) && (
+          <div className="border-t border-cyan-700 pt-3 flex-1 min-h-0 flex flex-col">
+            <h3 className="font-semibold mb-2 text-cyan-300 flex-shrink-0">
+              {optimalSolution && showOptimal 
+                ? "Optimal Solution" 
+                : "Route Details"}
+            </h3>
+            
+            {/* Content container with scrolling - flex-1 to take remaining space */}
+            <div className="overflow-y-auto pr-1 custom-scrollbar flex-1">
+              {/* Show optimal path when available and selected */}
+              {optimalSolution && showOptimal && (
+                <div>
+                  <div className="text-purple-200 mb-2">
+                    <span className="font-semibold">Optimal Distance:</span> {optimalSolution.totalDistance} km
+                  </div>
+                  <ul className="text-sm text-purple-100">
+                    <li>Start at {cityObjectsRef.current[homeCity]?.name}</li>
+                    {optimalSolution.optimizedRoute.map((city, index) => (
+                      <li key={city.id} className="flex items-center">
+                        <span className="text-purple-400 mr-1">→</span> {city.name}
+                        <span className="ml-1 bg-purple-900 px-1 rounded text-xs">
+                          {index === 0 
+                            ? `(${distances[homeCity]?.[city.id]} km)`
+                            : `(${distances[optimalSolution.optimizedRoute[index-1].id]?.[city.id]} km)`
+                          }
+                        </span>
+                      </li>
+                    ))}
+                    <li className="flex items-center">
+                      <span className="text-purple-400 mr-1">→</span> Return to {cityObjectsRef.current[homeCity]?.name}
+                      <span className="ml-1 bg-purple-900 px-1 rounded text-xs">
+                        ({distances[optimalSolution.optimizedRoute[optimalSolution.optimizedRoute.length-1].id]?.[homeCity]} km)
+                      </span>
+                    </li>
+                  </ul>
+                </div>
+              )}
+              
+              {/* Show user's route when no optimal solution or when user path is selected */}
+              {(!optimalSolution || !showOptimal) && selectedCities.length > 0 && homeCity && (
+                <ul className="text-sm text-cyan-100">
+                  <li>Start at {cityObjectsRef.current[homeCity]?.name}</li>
+                  {selectedCities.map((cityId, index) => (
+                    <li key={cityId} className="flex items-center">
+                      <span className="text-cyan-400 mr-1">→</span> {cityObjectsRef.current[cityId]?.name} 
+                      <span className="ml-1 bg-cyan-900 px-1 rounded text-xs">
+                        ({index === 0 
+                          ? distances[homeCity]?.[cityId] 
+                          : distances[selectedCities[index-1]]?.[cityId]} km)
+                      </span>
+                    </li>
+                  ))}
+                  <li className="flex items-center">
+                    <span className="text-cyan-400 mr-1">→</span> Return to {cityObjectsRef.current[homeCity]?.name} 
+                    <span className="ml-1 bg-cyan-900 px-1 rounded text-xs">
+                      ({distances[selectedCities[selectedCities.length-1]]?.[homeCity]} km)
+                    </span>
+                  </li>
+                </ul>
+              )}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
