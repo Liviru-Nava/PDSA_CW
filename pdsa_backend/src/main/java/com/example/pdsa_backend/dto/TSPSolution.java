@@ -7,6 +7,7 @@ public class TSPSolution {
     private List<TSPRequest.City> optimizedRoute;
     private int totalDistance;
     private long executionTimeMs;
+    private int memoryUsageKb;
 
     // Getters and setters
     public String getAlgorithmName() {
@@ -39,5 +40,13 @@ public class TSPSolution {
 
     public void setExecutionTimeMs(long executionTimeMs) {
         this.executionTimeMs = executionTimeMs;
+    }
+
+    public int getMemoryUsageKb() {
+        return memoryUsageKb;
+    }
+
+    public void setMemoryUsageKb(int memoryUsageKb) {
+        this.memoryUsageKb = memoryUsageKb;
     }
 }

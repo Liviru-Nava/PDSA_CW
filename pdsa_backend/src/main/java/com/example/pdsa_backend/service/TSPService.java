@@ -1,10 +1,15 @@
 package com.example.pdsa_backend.service;
 
+import ch.qos.logback.core.net.SyslogOutputStream;
+import com.example.pdsa_backend.data.*;
+import com.example.pdsa_backend.dto.TSPGameResult;
 import com.example.pdsa_backend.dto.TSPRequest;
 import com.example.pdsa_backend.dto.TSPResponse;
 import com.example.pdsa_backend.dto.TSPSolution;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.stream.Collectors;
@@ -12,6 +17,44 @@ import java.util.stream.Collectors;
 @Service
 public class TSPService {
 
+    @Autowired
+    private PlayerRepository playerRepository;
+    @Autowired
+    GameResultRepository gameResultRepository;
+    @Autowired
+    TravelingSalesmanResultRepository travelingSalesmanResultRepository;
+    @Autowired
+    private PerformanceMetricRepository performanceMetricRepository;
+
+
+
+    //----------------------------------CHECK USERNAME---------------------------------------------//
+    public Map<String, Object> usernameExists(String username) {
+        Map<String, Object> result = new HashMap<>();
+        boolean exists = playerRepository.existsByUsername(username);
+        result.put("exists", exists);
+
+        if (exists) {
+            // Retrieve the player ID only if the username exists
+            Player player = playerRepository.findByUsername(username);
+            result.put("playerId", player.getPlayerId());
+        }
+
+        return result;
+    }
+
+    public Player registerPlayer(String username) {
+        Player player = new Player();
+        player.setUsername(username);
+        player.setRegistrationDate(LocalDateTime.now());
+        player.setLastLogin(LocalDateTime.now());
+        return playerRepository.save(player);
+    }
+
+    //----------------------------------END CHECK USERNAME---------------------------------------------//
+
+
+    //----------------------------------SOLVE THE ALGORITHMS------------------------------------------//
     public TSPResponse solveTSP(TSPRequest request) {
         // Create thread pool of three threads
         ExecutorService executorService = Executors.newFixedThreadPool(3);
@@ -90,6 +133,22 @@ public class TSPService {
         return response;
     }
 
+    // HELPER METHOD TO GET THE MEMORY USAGE
+    private int measureMemoryUsage() {
+        // Force multiple garbage collections to stabilize memory
+        for (int i = 0; i < 5; i++) {
+            System.gc();
+            try {
+                Thread.sleep(100); // Give GC time to work
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+        }
+
+        Runtime runtime = Runtime.getRuntime();
+        return (int)((runtime.totalMemory() - runtime.freeMemory()) / 1024);
+    }
+
     //HELPER METHOD TO CREATE DISTANCE MATRIX FOR ALGORITHMS (we get cities and distance matrix from frontend request)
     private int[][] createDistanceMatrix(List<TSPRequest.City> cities, Map<Integer, Map<Integer, Integer>> distances) {
 
@@ -122,6 +181,9 @@ public class TSPService {
 
     // BRUTE FORCE ALGORITHM (we receive the list of cities and the distance matrix)
     private TSPSolution solveBruteForce(List<TSPRequest.City> cities, int[][] distanceMatrix) {
+        //get the memory before
+        int memoryBefore = measureMemoryUsage();
+
         //start the time of solving the algorithm
         long startTime = System.currentTimeMillis();
 
@@ -176,10 +238,16 @@ public class TSPService {
         bestPath.remove(0);
         bestPath.remove(bestPath.size() - 1);
 
+        // Get memory after execution
+        int memoryAfter = measureMemoryUsage();
+
+        // Calculate memory used by this algorithm execution
+        int memoryUsed = Math.max(0, memoryAfter - memoryBefore);
+
         solution.setOptimizedRoute(bestPath);
         solution.setTotalDistance(bestDistance);
         solution.setExecutionTimeMs(System.currentTimeMillis() - startTime); // Just a placeholder, will be more accurate in real implementation
-
+        solution.setMemoryUsageKb(memoryUsed);
         return solution;
     }
 
@@ -211,6 +279,9 @@ public class TSPService {
 
     // NEAREST NEIGHBOR ALGORITHM
     private TSPSolution solveNearestNeighbor(List<TSPRequest.City> cities, int[][] distanceMatrix) {
+        //get the memory before
+        int memoryBefore = measureMemoryUsage();
+
         //start time of the algorithm
         long startTime = System.currentTimeMillis();
 
@@ -248,15 +319,25 @@ public class TSPService {
         // Return to home city
         totalDistance += distanceMatrix[current][0];
 
+        // Get memory after execution
+        int memoryAfter = measureMemoryUsage();
+
+        // Calculate memory used by this algorithm execution
+        int memoryUsed = Math.max(0, memoryAfter - memoryBefore);
+
         solution.setOptimizedRoute(path);
         solution.setTotalDistance(totalDistance);
         solution.setExecutionTimeMs(System.currentTimeMillis() - startTime);
+        solution.setMemoryUsageKb(memoryUsed);
 
         return solution;
     }
 
     // HELD-KARP ALGORITHM (Dynamic Programming Approach)
     private TSPSolution solveHeldKarp(List<TSPRequest.City> cities, int[][] distanceMatrix) {
+        //get the memory before
+        int memoryBefore = measureMemoryUsage();
+
         //start time of the algorithm
         long startTime = System.currentTimeMillis();
 
@@ -347,10 +428,106 @@ public class TSPService {
             current = next;
         }
 
+        // Get memory after execution
+        int memoryAfter = measureMemoryUsage();
+
+        // Calculate memory used by this algorithm execution
+        int memoryUsed = Math.max(0, memoryAfter - memoryBefore);
+
         solution.setOptimizedRoute(path);
         solution.setTotalDistance(minTotalDist);
         solution.setExecutionTimeMs(System.currentTimeMillis() - startTime);
+        solution.setMemoryUsageKb(memoryUsed);
 
         return solution;
+    }
+
+    //----------------------------------END SOLVE THE ALGORITHMS------------------------------------------//
+
+
+
+
+    //-----------------------------------------SAVE THE DATA TO DATABASE RECORDS----------------------------------------
+    public void saveGameResult(TSPGameResult request) {
+        try{
+            //Make sure the shortest route starts and ends with the home city
+            List<String> completeRoute = new ArrayList<>(request.getShortestRoute());
+
+            // Check then add if home city not at the top of the list
+            if (completeRoute.isEmpty() || !completeRoute.get(0).equals(request.getHomeCity())) {
+                completeRoute.add(0, request.getHomeCity()); // Add home city at the beginning if not already there
+            }
+
+            // Check and add if the home city is not at the end of the list
+            if (completeRoute.size() < 2 || !completeRoute.get(completeRoute.size() - 1).equals(request.getHomeCity())) {
+                completeRoute.add(request.getHomeCity()); // Add home city at the end if not already there
+            }
+
+            // Convert the list of optimal routes to one string
+            String routeString = String.join("-->", completeRoute);
+
+            //first save the game result
+            GameResult gameResult = new GameResult();
+            gameResult.setGameId(request.getGameId());
+            gameResult.setPlayerId(request.getPlayerId());
+            gameResult.setCompletionTimeSeconds(request.getCompletionTime());
+            gameResult.setCreatedAt(LocalDateTime.now());
+
+            //get the saved data
+            GameResult gameResultResponse = gameResultRepository.save(gameResult);
+
+            //then save the traveling salesman result
+            TravelingSalesmanResult travelingSalesmanResult = new TravelingSalesmanResult();
+            travelingSalesmanResult.setResultId(gameResultResponse.getResultId());
+            travelingSalesmanResult.setHomeCity(request.getHomeCity());
+            travelingSalesmanResult.setShortestRoute(routeString);
+            travelingSalesmanResult.setShortestDistance(request.getShortestDistance());
+
+            //save the traveling salesman result
+            travelingSalesmanResultRepository.save(travelingSalesmanResult);
+
+            // Save performance metrics for each algorithm
+            savePerformanceMetrics(gameResultResponse.getResultId(), request.getSolutions());
+
+            System.out.println("TSP results and game results table saved!");
+
+        }catch(Exception ex){
+            ex.printStackTrace();
+            System.out.println(ex.getMessage());
+        }
+    }
+
+    private void savePerformanceMetrics(int resultId, List<TSPSolution> solutions) {
+        try {
+            for (TSPSolution solution : solutions) {
+                PerformanceMetric metric = new PerformanceMetric();
+                metric.setResultId(resultId);
+
+                // Set algorithm ID based on algorithm name
+                switch (solution.getAlgorithmName()) {
+                    case "Brute Force":
+                        metric.setAlgorithmId(1);
+                        break;
+                    case "Held-Karp (Dynamic Programming)":
+                        metric.setAlgorithmId(2);
+                        break;
+                    case "Nearest Neighbor":
+                        metric.setAlgorithmId(3);
+                        break;
+                    default:
+                        continue; // Skip unknown algorithms
+                }
+
+                metric.setExecutionTimeMs((int) solution.getExecutionTimeMs());
+                metric.setMemoryUsageKb(solution.getMemoryUsageKb());
+                metric.setCreatedAt(LocalDateTime.now());
+
+                performanceMetricRepository.save(metric);
+            }
+            System.out.println("Performance metrics saved for all algorithms!");
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            System.out.println("Error saving performance metrics: " + ex.getMessage());
+        }
     }
 }
