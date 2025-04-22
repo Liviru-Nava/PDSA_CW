@@ -14,7 +14,7 @@ export default function InfoPanel({ playerName, isPlayerTurn, gameTime, algorith
     };
   
     return (
-      <div className="w-full max-w-md bg-white p-4 rounded-lg shadow mb-6 gap-5">
+      <div className="w-[420px] bg-white p-4 rounded-lg shadow mb-6 gap-5">
         <div className="flex justify-between items-center">
           <div className="text-lg font-medium text-black">Player: {playerName}</div>
           <div className="text-lg font-medium text-black">Time: {formatTime(gameTime)}</div>

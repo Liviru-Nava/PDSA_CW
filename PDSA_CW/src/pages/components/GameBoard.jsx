@@ -7,7 +7,7 @@ export default function GameBoard({ board, onCellClick }) {
           <div
             key={index}
             onClick={() => onCellClick(index)}
-            className={`w-16 h-16 flex items-center justify-center text-2xl font-bold rounded cursor-pointer
+            className={`w-24 h-24 flex items-center justify-center text-6xl font-bold rounded cursor-pointer
               ${cell === null ? 'bg-white hover:bg-gray-100' : 'bg-gray-50'}
               ${cell === 'X' ? 'text-blue-600' : 'text-red-600'}`}
           >
