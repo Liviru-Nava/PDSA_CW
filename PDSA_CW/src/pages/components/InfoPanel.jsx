@@ -14,16 +14,16 @@ export default function InfoPanel({ playerName, isPlayerTurn, gameTime, algorith
     };
   
     return (
-      <div className="w-[420px] bg-white p-4 rounded-lg shadow mb-6 gap-5">
+      <div className="w-[420px] bg-white/10 p-4 rounded-lg shadow mb-6 gap-5 backdrop-blur-sm">
         <div className="flex justify-between items-center">
-          <div className="text-lg font-medium text-black">Player: {playerName}</div>
-          <div className="text-lg font-medium text-black">Time: {formatTime(gameTime)}</div>
+          <div className="text-lg font-medium text-white">Player: {playerName}</div>
+          <div className="text-lg font-medium text-white">Time: {formatTime(gameTime)}</div>
         </div>
         <div className="flex justify-between items-center">
-          <div className={`text-lg font-medium ${isPlayerTurn ? 'text-green-600' : 'text-gray-600'}`}>
+          <div className={`text-lg font-medium ${isPlayerTurn ? 'text-green-600' : 'text-red-500'}`}>
             {isPlayerTurn ? "Your Turn" : "Computer's Turn"}
           </div>
-          <div className="text-sm text-gray-600">
+          <div className="text-sm text-gray-150">
             AI: {getAlgorithmName()}
           </div>
         </div>

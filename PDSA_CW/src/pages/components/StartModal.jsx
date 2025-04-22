@@ -16,12 +16,12 @@ export default function StartModal({ onStart }) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white p-8 rounded-lg shadow-lg w-96">
+    <div className="fixed inset-0 bg-gray-700/10 backdrop-blur-sm flex items-center justify-center z-50">
+      <div className="bg-white/90 p-8 rounded-lg shadow-lg w-96">
         <h2 className="text-2xl font-bold mb-4 text-center text-black">Welcome to Tic-Tac-Toe</h2>
         <form onSubmit={handleSubmit}>
           <div className="mb-4">
-            <label className="block text-gray-700 mb-2" htmlFor="name">
+            <label className="block text-black mb-2" htmlFor="name">
               Your Name
             </label>
             <input
@@ -36,7 +36,7 @@ export default function StartModal({ onStart }) {
           </div>
           
           <div className="mb-6">
-            <label className="block text-gray-700 mb-2" htmlFor="algorithm">
+            <label className="block text-black mb-2" htmlFor="algorithm">
               Select Algorithm
             </label>
             <select
