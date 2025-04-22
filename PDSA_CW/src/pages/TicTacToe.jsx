@@ -22,6 +22,7 @@ function TicTacToe() {
   const [lastMoveTime, setLastMoveTime] = useState(0);
   const [allMoveTimes, setAllMoveTimes] = useState([]);
   
+  
   // Start game timer
   useEffect(() => {
     let interval;
