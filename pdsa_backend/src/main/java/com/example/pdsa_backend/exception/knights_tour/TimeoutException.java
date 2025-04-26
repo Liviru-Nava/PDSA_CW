@@ -1,6 +1,6 @@
-package com.example.pdsa_backend.exception;
+package com.example.pdsa_backend.exception.knights_tour;
 
-import com.example.pdsa_backend.algorithms.KnightsTourSolver;
+import com.example.pdsa_backend.algorithms.knights_tour.KnightsTourSolver;
 
 /**
  * Custom exception for timeout during algorithm execution.

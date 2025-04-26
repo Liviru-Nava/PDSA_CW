@@ -1,6 +1,6 @@
-package com.example.pdsa_backend.algorithms;
+package com.example.pdsa_backend.algorithms.knights_tour;
 
-import com.example.pdsa_backend.exception.TimeoutException;
+import com.example.pdsa_backend.exception.knights_tour.TimeoutException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;

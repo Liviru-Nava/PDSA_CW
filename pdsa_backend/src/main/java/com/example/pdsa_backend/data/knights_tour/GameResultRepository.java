@@ -1,6 +1,5 @@
-package com.example.pdsa_backend.data;
+package com.example.pdsa_backend.data.knights_tour;
 
-import com.example.pdsa_backend.data.GameResult;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;

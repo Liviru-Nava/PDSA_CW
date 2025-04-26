@@ -1,9 +1,9 @@
-package com.example.pdsa_backend.controller;
+package com.example.pdsa_backend.controller.knights_tour;
 
 import com.example.pdsa_backend.dto.knights_tour.*;
-import com.example.pdsa_backend.exception.AlgorithmExecutionException;
-import com.example.pdsa_backend.exception.InvalidParameterException;
-import com.example.pdsa_backend.service.KnightsTourService;
+import com.example.pdsa_backend.exception.knights_tour.AlgorithmExecutionException;
+import com.example.pdsa_backend.exception.knights_tour.InvalidParameterException;
+import com.example.pdsa_backend.service.knights_tour.KnightsTourService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;

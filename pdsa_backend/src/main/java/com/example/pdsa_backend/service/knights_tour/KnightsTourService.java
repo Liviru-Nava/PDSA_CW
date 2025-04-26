@@ -1,21 +1,14 @@
-package com.example.pdsa_backend.service;
+package com.example.pdsa_backend.service.knights_tour;
 
-import com.example.pdsa_backend.algorithms.AbstractKnightsTour;
-import com.example.pdsa_backend.algorithms.KnightsTourBacktrackHeuristic;
-import com.example.pdsa_backend.algorithms.KnightsTourBacktracking;
-import com.example.pdsa_backend.algorithms.KnightsTourWarnsdorffs;
-import com.example.pdsa_backend.data.*;
-import com.example.pdsa_backend.data.knights_tour.KnightsTourGameResult;
-import com.example.pdsa_backend.data.knights_tour.KnightsTourGameResultRepository;
-import com.example.pdsa_backend.data.knights_tour.KnightsTourPerformanceMetrics;
-import com.example.pdsa_backend.data.knights_tour.KnightsTourPerformanceMetricsRepository;
+import com.example.pdsa_backend.algorithms.knights_tour.*;
+import com.example.pdsa_backend.data.knights_tour.*;
 import com.example.pdsa_backend.dto.knights_tour.AlgorithmMetric;
 import com.example.pdsa_backend.dto.knights_tour.AlgorithmsMetric;
 import com.example.pdsa_backend.dto.knights_tour.KTSolution;
 import com.example.pdsa_backend.dto.knights_tour.PlayerGameResult;
-import com.example.pdsa_backend.exception.AlgorithmExecutionException;
-import com.example.pdsa_backend.exception.InvalidParameterException;
-import com.example.pdsa_backend.exception.TimeoutException;
+import com.example.pdsa_backend.exception.knights_tour.AlgorithmExecutionException;
+import com.example.pdsa_backend.exception.knights_tour.InvalidParameterException;
+import com.example.pdsa_backend.exception.knights_tour.TimeoutException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;

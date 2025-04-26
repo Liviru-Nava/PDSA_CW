@@ -1,4 +1,4 @@
-package com.example.pdsa_backend.algorithms;
+package com.example.pdsa_backend.algorithms.knights_tour;
 
 import java.util.Arrays;
 
