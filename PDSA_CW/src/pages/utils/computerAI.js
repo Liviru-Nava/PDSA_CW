@@ -3,7 +3,7 @@ import { checkWinner, getAvailableMoves } from './gameLogic';
 
 // Main function to make computer move based on selected algorithm
 export async function makeComputerMove(board, algorithm) {
-  if (algorithm === 'minimax') {
+  if (algorithm === 'Minimax with Alpha-Beta Pruning') {
     return findBestMoveMinimaxAlphaBeta(board);
   } else {
     return findBestMoveMCTS(board);

@@ -14,7 +14,7 @@ function TicTacToe() {
   const [board, setBoard] = useState(Array(25).fill(null));
   const [isPlayerTurn, setIsPlayerTurn] = useState(true);
   const [playerName, setPlayerName] = useState('');
-  const [algorithm, setAlgorithm] = useState('minimax');
+  const [algorithm, setAlgorithm] = useState('Minimax with Alpha-Beta Pruning');
   const [gameStarted, setGameStarted] = useState(false);
   const [gameOver, setGameOver] = useState(false);
   const [winner, setWinner] = useState(null);
@@ -24,6 +24,11 @@ function TicTacToe() {
   const [moveTime, setMoveTime] = useState(0);
   const [lastMoveTime, setLastMoveTime] = useState(0);
   const [allMoveTimes, setAllMoveTimes] = useState([]);
+  const [capturedGameTime, setCapturedGameTime] = useState(0);
+
+  const handleTimeUpdate = (timeInteger) => {
+    setCapturedGameTime(timeInteger);
+  };
 
   //3D Background
   useEffect(() => {
@@ -313,9 +318,105 @@ function TicTacToe() {
   const handleEndGame = () => {
     setShowEndGameModal(false);
     setShowStartModal(true);
-  resetGame();
-  setGameStarted(false);
+    resetGame();
+    setGameStarted(false);
   };
+
+  //add a useEffect that watches for showEndGameModal changes
+  useEffect(() => {
+    if (showEndGameModal && winner === playerName) {
+      // Create a 2D representation of the board
+      const board2D = [];
+      for (let i = 0; i < 5; i++) {
+        board2D.push(board.slice(i * 5, (i + 1) * 5));
+      }
+      
+      // Get all X and O positions in order
+      const xPositions = [];
+      const oPositions = [];
+      
+      board.forEach((cell, index) => {
+        if (cell === 'X') {
+          xPositions.push(index);
+        } else if (cell === 'O') {
+          oPositions.push(index);
+        }
+      });
+      
+      // Create moves array in chronological order
+      const moves = [];
+      const maxMoves = Math.max(xPositions.length, oPositions.length);
+      
+      for (let i = 0; i < maxMoves; i++) {
+        if (i < xPositions.length) {
+          moves.push({ symbol: 'X', position: xPositions[i] });
+        }
+        if (i < oPositions.length) {
+          moves.push({ symbol: 'O', position: oPositions[i] });
+        }
+      }
+      
+      // Create a comprehensive game state object
+      const gameState = {
+        finalBoard: board,
+        board2D: board2D,
+        moves: moves,
+        playerMoves: xPositions,
+        algorithmMoves: oPositions,
+        moveCount: moves.length
+      };
+
+      const totalTime = allMoveTimes.reduce((sum, move) => sum + Math.floor(Number(move.timeMs)), 0);
+      console.log(totalTime);
+      console.log(capturedGameTime)
+      
+      // Stringify the game state to send to backend
+      const boardState = JSON.stringify(gameState);
+      
+      console.log("Final game state:", gameState);
+      
+      const fetchAlgorithms = async () => {
+        try {
+          const response = await fetch('http://localhost:8081/pdsa/Tic-Tac-Toe/game-end', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              username: playerName,
+              completedTime: capturedGameTime,
+              executionTime: totalTime,
+              algorithmName: algorithm,
+              boardState: boardState
+            })
+          });
+          
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+          
+          const data = await response.json();
+          console.log("Server response:", data);
+        } catch (err) {
+          console.error('Error sending game data:', err);
+        }
+      };
+    
+      fetchAlgorithms();
+    }
+  }, [showEndGameModal, board, playerName, algorithm]);
+
+
+  const handleGameEnd = (board2D) => {
+    // Do something with the 2D board
+    console.log("Game ended with board:", board2D);
+    // You can save it to state, process it, etc.
+    
+    // Maybe add state to store the 2D board if needed
+    // const [finalBoard2D, setFinalBoard2D] = useState(null);
+    // setFinalBoard2D(board2D);
+  };
+
   return (
     <div className="min-h-screen bg-[#01051df5] text-white overflow-hidden">
 
@@ -384,17 +485,18 @@ function TicTacToe() {
               <div className="mt-4 mb-8">
                 <GameBoard 
                   board={board} 
-                  onCellClick={handleCellClick} 
+                  onCellClick={handleCellClick}
                 />
               </div>
     
               <div className='flex flex-col items-center p-4 mt-4'>
-                <InfoPanel 
-                  playerName={playerName} 
-                  isPlayerTurn={isPlayerTurn} 
-                  gameTime={gameTime} 
-                  algorithm={algorithm}
-                />
+              <InfoPanel 
+                playerName={playerName} 
+                isPlayerTurn={isPlayerTurn} 
+                gameTime={gameTime} 
+                algorithm={algorithm}
+                onTimeUpdate={handleTimeUpdate}
+              />
                 
                 <div className="w-full flex flex-row items-center justify-between gap-4">
                   <button 
@@ -417,10 +519,11 @@ function TicTacToe() {
           )}
           
           {showEndGameModal && (
-            <EndGameModal 
+            <EndGameModal
               winner={winner} 
               onRestart={handleRestartGame} 
               onExit={handleEndGame}
+              onGameEnd={handleGameEnd}
             />
           )}
         </div>
