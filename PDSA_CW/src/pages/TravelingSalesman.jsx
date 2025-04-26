@@ -5,16 +5,16 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 
 // City data with coordinates
 const CITY_DATA = [
-  { id: 1, name: "Astra A", position: [25, 0, 0] }, // 0°
-  { id: 2, name: "Bravo B", position: [20.23, 0, 14.69] }, // 36°
-  { id: 3, name: "Cora C", position: [7.73, 0, 23.78] }, // 72°
-  { id: 4, name: "Delta D", position: [-7.73, 0, 23.78] }, // 108°
-  { id: 5, name: "Eyla E", position: [-20.23, 0, 14.69] }, // 144°
-  { id: 6, name: "Fira F", position: [-25, 0, 0] }, // 180°
-  { id: 7, name: "Gala G", position: [-20.23, 0, -14.69] }, // 216°
-  { id: 8, name: "Hira H", position: [-7.73, 0, -23.78] }, // 252°
-  { id: 9, name: "Iron I", position: [7.73, 0, -23.78] }, // 288°
-  { id: 10, name: "Juna J", position: [20.23, 0, -14.69] }, // 324°
+  { id: 1, name: "A", position: [25, 0, 0] }, // 0°
+  { id: 2, name: "B", position: [20.23, 0, 14.69] }, // 36°
+  { id: 3, name: "C", position: [7.73, 0, 23.78] }, // 72°
+  { id: 4, name: "D", position: [-7.73, 0, 23.78] }, // 108°
+  { id: 5, name: "E", position: [-20.23, 0, 14.69] }, // 144°
+  { id: 6, name: "F", position: [-25, 0, 0] }, // 180°
+  { id: 7, name: "G", position: [-20.23, 0, -14.69] }, // 216°
+  { id: 8, name: "H", position: [-7.73, 0, -23.78] }, // 252°
+  { id: 9, name: "I", position: [7.73, 0, -23.78] }, // 288°
+  { id: 10, name: "J", position: [20.23, 0, -14.69] }, // 324°
 ];
 
 
@@ -23,6 +23,7 @@ const TravelingSalesman = () => {
   const playerId = location.state?.playerId;
   const username = location.state?.username;
   
+  //states for the traveling salesman problem
   const [homeCity, setHomeCity] = useState(null);
   const [selectedCities, setSelectedCities] = useState([]);
   const [distances, setDistances] = useState({});
@@ -42,6 +43,7 @@ const TravelingSalesman = () => {
   const [timer, setTimer] = useState(0);
   const [solveTime, setSolveTime] = useState(null);
 
+  //animated dots for round number
   const [roundDots, setRoundDots] = useState(".");
   useEffect(() => {
     const dotsInterval = setInterval(() => {
@@ -51,6 +53,7 @@ const TravelingSalesman = () => {
     return () => clearInterval(dotsInterval);
   }, []);
   
+  //references to 3D components, 3js elements, labels and paths
   const cityLabelsRef = useRef({});
   const distanceLabelsRef = useRef({});
   const mountRef = useRef(null);
@@ -802,7 +805,7 @@ const TravelingSalesman = () => {
   
   //Solve the TSP problem
   const handleSolve = async () => {
-    if (!homeCity || selectedCities.length === 0) {
+    if (!homeCity || selectedCities.length !== 9) {
       alert('Please select a home city and at least one destination.');
       return;
     }
@@ -815,8 +818,7 @@ const TravelingSalesman = () => {
       const tspData = {
         homeCity: {
           id: homeCity,
-          name: cityObjectsRef.current[homeCity]?.name,
-          position: cityObjectsRef.current[homeCity]?.position
+          name: cityObjectsRef.current[homeCity]?.name
         },
         selectedCities: selectedCities.map(cityId => ({
           id: cityId,
