@@ -1,4 +1,4 @@
-package com.example.pdsa_backend.data;
+package com.example.pdsa_backend.data.knights_tour;
 
 import jakarta.persistence.*;
 

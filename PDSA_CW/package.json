@@ -12,9 +12,11 @@
   "dependencies": {
     "@react-three/drei": "^10.0.6",
     "@react-three/fiber": "^9.1.2",
+    "gsap": "^3.12.7",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-router-dom": "^7.5.0",
+    "recharts": "^2.15.3",
     "three": "^0.175.0"
   },
   "devDependencies": {
