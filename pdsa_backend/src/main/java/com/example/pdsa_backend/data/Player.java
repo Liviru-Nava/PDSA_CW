@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonFormat;
 import jakarta.persistence.*;
 
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 
 @Entity
 @Table(name="player")
@@ -45,7 +46,7 @@ public class Player {
         this.registrationDate = registrationDate;
     }
 
-    public LocalDateTime getLastLogin() {
+    public LocalDateTime getLastLogin(LocalTime now) {
         return lastLogin;
     }
 
