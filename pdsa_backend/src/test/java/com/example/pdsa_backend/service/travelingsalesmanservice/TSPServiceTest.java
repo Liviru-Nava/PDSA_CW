@@ -1,4 +1,5 @@
 package com.example.pdsa_backend.service.travelingsalesmanservice;
+import com.example.pdsa_backend.data.*;
 import com.example.pdsa_backend.data.travelingsalesmandata.*;
 import com.example.pdsa_backend.dto.travelingsalesmandto.TSPGameResult;
 import com.example.pdsa_backend.dto.travelingsalesmandto.TSPRequest;
@@ -139,7 +140,7 @@ public class TSPServiceTest {
         mockPlayer.setUsername(username);
 
         when(playerRepository.existsByUsername(username)).thenReturn(true);
-        when(playerRepository.findByUsername(username)).thenReturn(mockPlayer);
+        when(playerRepository.findByUsername(username)).thenReturn(Optional.of(mockPlayer));
 
         // Act by calling the method
         Map<String, Object> result = tspService.usernameExists(username);

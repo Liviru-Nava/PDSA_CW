@@ -1,6 +1,6 @@
 package com.example.pdsa_backend.controller.travelingsalesmancontroller;
 
-import com.example.pdsa_backend.data.travelingsalesmandata.Player;
+import com.example.pdsa_backend.data.Player;
 import com.example.pdsa_backend.dto.travelingsalesmandto.TSPGameResult;
 import com.example.pdsa_backend.dto.travelingsalesmandto.TSPRequest;
 import com.example.pdsa_backend.dto.travelingsalesmandto.TSPResponse;

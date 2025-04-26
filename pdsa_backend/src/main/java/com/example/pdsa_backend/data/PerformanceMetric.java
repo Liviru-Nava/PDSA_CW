@@ -1,4 +1,4 @@
-package com.example.pdsa_backend.data.travelingsalesmandata;
+package com.example.pdsa_backend.data;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import jakarta.persistence.*;

@@ -1,6 +1,7 @@
 package com.example.pdsa_backend.service.knights_tour;
 
 import com.example.pdsa_backend.algorithms.knights_tour.*;
+import com.example.pdsa_backend.data.*;
 import com.example.pdsa_backend.data.knights_tour.*;
 import com.example.pdsa_backend.dto.knights_tour.AlgorithmMetric;
 import com.example.pdsa_backend.dto.knights_tour.AlgorithmsMetric;
@@ -19,7 +20,7 @@ import java.util.*;
 
 @Service
 public class KnightsTourService {
-    String gameName = "KnightsTour";
+    String gameName = "Knight's Tour Problem";
     private static final Logger logger = LoggerFactory.getLogger(KnightsTourService.class);
     private static final List<String> SUPPORTED_ALGORITHMS = Arrays.asList("warnsdorffs", "backtracking", "backtrackingheuristic");
     @Autowired

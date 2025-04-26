@@ -1,4 +1,4 @@
-package com.example.pdsa_backend.data.knights_tour;
+package com.example.pdsa_backend.data;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 

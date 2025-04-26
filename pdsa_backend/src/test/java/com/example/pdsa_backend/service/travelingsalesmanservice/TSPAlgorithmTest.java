@@ -1,8 +1,8 @@
 package com.example.pdsa_backend.service.travelingsalesmanservice;
 
-import com.example.pdsa_backend.data.travelingsalesmandata.GameResultRepository;
-import com.example.pdsa_backend.data.travelingsalesmandata.PerformanceMetricRepository;
-import com.example.pdsa_backend.data.travelingsalesmandata.PlayerRepository;
+import com.example.pdsa_backend.data.GameResultRepository;
+import com.example.pdsa_backend.data.PerformanceMetricRepository;
+import com.example.pdsa_backend.data.PlayerRepository;
 import com.example.pdsa_backend.data.travelingsalesmandata.TravelingSalesmanResultRepository;
 import com.example.pdsa_backend.dto.travelingsalesmandto.TSPRequest;
 import com.example.pdsa_backend.dto.travelingsalesmandto.TSPSolution;

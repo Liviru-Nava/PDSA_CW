@@ -1,5 +1,6 @@
 package com.example.pdsa_backend.service.travelingsalesmanservice;
 
+import com.example.pdsa_backend.data.*;
 import com.example.pdsa_backend.data.travelingsalesmandata.*;
 import com.example.pdsa_backend.dto.travelingsalesmandto.TSPGameResult;
 import com.example.pdsa_backend.dto.travelingsalesmandto.TSPRequest;
@@ -37,7 +38,7 @@ public class TSPService {
 
         if (userExists) {
             // Retrieve the player ID only if the username exists
-            Player player = playerRepository.findByUsername(username);
+            Player player = playerRepository.findByUsername(username).get();
             userResult.put("playerId", player.getPlayerId());
         }
         return userResult;
