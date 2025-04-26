@@ -7,7 +7,7 @@ import {
   Text,
 } from "@react-three/drei";
 import { gsap } from "gsap";
-
+import { BarChart, CartesianGrid, XAxis, YAxis, Tooltip, Legend, Bar, ResponsiveContainer } from 'recharts';
 const StarryBackground = () => {
   const [stars, setStars] = useState([]);
 
@@ -521,9 +521,113 @@ const StarryBackground = () => {
   );
 };
 
+// Username popup component
+const UsernamePopup = ({ onSubmit }) => {
+  const [username, setUsername] = useState("");
+  
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (username.trim()) {
+      onSubmit(username);
+    }
+  };
+  
+  return (
+    <div 
+      style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        width: '100%',
+        height: '100%',
+        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        zIndex: 2000,
+      }}
+    >
+      {/* StarryBackground component to make the popup more visually appealing */}
+      <StarryBackground />
+      
+      <div
+        style={{
+          backgroundColor: 'rgba(25, 25, 50, 0.95)',
+          borderRadius: '15px',
+          padding: '30px',
+          width: '400px',
+          textAlign: 'center',
+          boxShadow: '0 0 30px #00ffff, 0 0 20px #ff00ff',
+          border: '2px solid #00ffff',
+          zIndex: 2001,
+        }}
+      >
+        <h2 
+          style={{
+            color: '#ffffff',
+            fontSize: '28px',
+            marginBottom: '20px',
+            textShadow: '0 0 10px #00ffff, 0 0 5px #00ffff',
+          }}
+        >
+          Welcome to Knight's Tour!
+        </h2>
+        <p 
+          style={{
+            color: '#ffffff',
+            fontSize: '16px',
+            marginBottom: '25px',
+          }}
+        >
+          Please enter your name to begin the challenge:
+        </p>
+        
+        <form onSubmit={handleSubmit}>
+          <input
+            type="text"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            style={{
+              width: '100%',
+              padding: '12px',
+              fontSize: '16px',
+              backgroundColor: 'rgba(0, 0, 0, 0.4)',
+              color: 'white',
+              border: '1px solid #00ffff',
+              borderRadius: '5px',
+              marginBottom: '20px',
+              outline: 'none',
+            }}
+            placeholder="Your name"
+            autoFocus
+          />
+          
+          <button
+            type="submit"
+            style={{
+              padding: '12px 25px',
+              fontSize: '18px',
+              backgroundColor: '#008cff',
+              color: 'white',
+              border: 'none',
+              borderRadius: '5px',
+              cursor: 'pointer',
+              boxShadow: '0 0 10px #008cff',
+              transition: 'all 0.2s',
+            }}
+            onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#4dafff'}
+            onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#008cff'}
+          >
+            Start Game
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+};
 
 // Celebration component with enhanced confetti effects
-const Celebration = ({ moveCount, gameTime, onClose, isDefeat = false, resetGame }) => {
+const Celebration = ({ moveCount, gameTime, onClose, isDefeat = false, resetGame, boardSize, setShowResultsTab }) => {
   // Create confetti particles on component mount (only for victory)
   useEffect(() => {
     // Don't show confetti for defeat scenario
@@ -689,7 +793,7 @@ const Celebration = ({ moveCount, gameTime, onClose, isDefeat = false, resetGame
         >
           {isDefeat 
             ? 'You have no more legal moves available. Your knight is trapped!' 
-            : "You've completed the Knight's Tour by visiting all 64 squares!"}
+            : `You've completed the Knight's Tour by visiting all ${boardSize} the squares!`}
         </p>
         <div 
           style={{
@@ -711,6 +815,7 @@ const Celebration = ({ moveCount, gameTime, onClose, isDefeat = false, resetGame
           {isDefeat && (
             <button 
               onClick={function(){
+                setShowResultsTab(true);
                 onClose(false);
               }} 
               style={{
@@ -736,6 +841,7 @@ const Celebration = ({ moveCount, gameTime, onClose, isDefeat = false, resetGame
                 console.log("Here");
               }else{
                 onClose(false);
+                setShowResultsTab(true);
               }
             }} // Pass false to indicate normal close
             style={{
@@ -791,11 +897,11 @@ const NumberMarker = ({ position, number }) => {
 };
 
 // BoardSquare component with interactive features
-const BoardSquare = ({ position, color, isLegalMove, isDeadEnd, onClick }) => {
+const BoardSquare = ({ position, color, isLegalMove, isDeadEnd, onClick, selectedAlgorithm }) => {
   const [hovered, setHovered] = useState(false);
 
   // Determine the final color based on state
-  const squareColor = isDeadEnd
+  const squareColor = isDeadEnd && selectedAlgorithm === "user"
     ? "#ff3333" // Red for dead ends
     : isLegalMove
     ? "#4bba45" // Green for legal moves
@@ -819,7 +925,7 @@ const BoardSquare = ({ position, color, isLegalMove, isDeadEnd, onClick }) => {
 
 // Knight model component
 const KnightModel = ({ position = [0, 0, 0], rotation = [0, 0, 0] }) => {
-  const { scene } = useGLTF("/src/assets/knight.glb");
+  const { scene } = useGLTF("/knight.glb");
 
   // Clone the scene to make it usable
   const knightScene = React.useMemo(() => scene.clone(), [scene]);
@@ -919,7 +1025,9 @@ const formatTime = (seconds) => {
 };
 
 // Main ChessBoard component
-const KnightsTour = () => {
+const ChessBoard = () => {
+  const [showUsernamePopup, setShowUsernamePopup] = useState(true);
+  const [username, setUsername] = useState("");
   const [gameStarted, setGameStarted] = useState(false);
   const [knightPosition, setKnightPosition] = useState(null);
   const [targetPosition, setTargetPosition] = useState(null);
@@ -934,6 +1042,593 @@ const KnightsTour = () => {
   const [showVictoryModal, setShowVictoryModal] = useState(false);
   const [gameCompleted, setGameCompleted] = useState(false);
   const [isDeadEnd, setIsDeadEnd] = useState(false);
+  const [boardSize, setBoardSize] = useState(8); // Default to 8x8 board
+    // Add these near your other state variables in ChessBoard component
+  const [showResultsTab, setShowResultsTab] = useState(false);
+  const [selectedAlgorithm, setSelectedAlgorithm] = useState("user"); // "user", "warnsdorff", "backtracking"
+  const [algorithmSequences, setAlgorithmSequences] = useState({
+    user: [], // Will contain user's moves as [0, 1, 2, ...] where each number is the square index
+    warnsdorff: [], // Will contain Warnsdorff's algorithm solution
+    backtracking: [], // Will contain backtracking algorithm solution
+    backtrackingHeuristic:[]
+  });
+
+  const [isLoading, setIsLoading] = useState(false);
+  const [serverError, setServerError] = useState(null);
+  const [showMetricsChart, setShowMetricsChart] = useState(false);
+  const [metricsData, setMetricsData] = useState([]);
+
+  const fetchMetricsData = async () => {
+    setIsLoading(true);
+    setServerError(null);
+    try {
+      const response = await fetch(`http://localhost:8081/pdsa/knights-tour/metrics/${username}`);
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch metrics data: ${response.status}`);
+      }
+      const data = await response.json();
+      setMetricsData(data);
+    } catch (err) {
+      console.error("Error fetching metrics data:", err);
+      setServerError("Failed to load algorithm metrics. Please try again later.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const AlgorithmMetricsChart = () => {        
+    return (
+      <div style={{
+        position: "fixed",
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        backgroundColor: "rgba(0, 0, 0, 0.8)",
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
+        zIndex: 1000,
+      }}>
+        <div style={{
+          backgroundColor: "rgba(0, 0, 0, 0.9)",
+          padding: "30px",
+          borderRadius: "15px",
+          width: "80%",
+          maxWidth: "800px",
+          maxHeight: "80vh",
+          overflow: "auto",
+          border: "1px solid #00ffff",
+          boxShadow: "0 0 20px rgba(0, 255, 255, 0.5)",
+          position: "relative"
+        }}>
+          <button 
+            onClick={() => setShowMetricsChart(false)}
+            style={{
+              position: "absolute",
+              top: "10px",
+              right: "10px",
+              background: "none",
+              border: "none",
+              color: "#00ffff",
+              fontSize: "24px",
+              cursor: "pointer"
+            }}
+          >
+            ×
+          </button>
+          
+          <h2 style={{
+            color: "#00ffff",
+            textAlign: "center",
+            marginBottom: "20px",
+            textShadow: "0 0 5px rgba(0, 255, 255, 0.5)"
+          }}>
+            Algorithm Performance Metrics
+          </h2>
+          
+          {isLoading ? (
+            <div style={{
+              display: "flex",
+              justifyContent: "center",
+              padding: "40px"
+            }}>
+              <div style={{
+                width: "40px",
+                height: "40px",
+                border: "4px solid rgba(0, 255, 255, 0.3)",
+                borderTop: "4px solid #00ffff",
+                borderRadius: "50%",
+                animation: "spin 1s linear infinite"
+              }} />
+            </div>
+          ) : serverError ? (
+            <div style={{
+              color: "#ff6b6b",
+              textAlign: "center",
+              padding: "20px"
+            }}>
+              {serverError}
+            </div>
+          ) : (
+            <div style={{ height: "400px" }}>
+              <MetricsBarChart data={metricsData} />
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  const MetricsBarChart = ({ data }) => {
+    if (!data || data.length === 0) {
+      return <div style={{ color: "#00ffff", textAlign: "center" }}>No data available</div>;
+    }
+    
+    // Process data for the chart - let's restructure it for a bar chart
+    const chartData = data[0].rounds.map((round, index) => {
+      const dataPoint = { 
+        name: `${round}x${round}`,  // Board size as name
+      };
+      
+      data.forEach(algorithm => {
+        // For each algorithm, add execution time for this round index
+        // Add a small offset to ensure logarithmic scale works (avoid 0 values)
+        dataPoint[algorithm.algorithmName] = (algorithm.executionTimes[index] || 0) + 0.1;
+      });
+      
+      return dataPoint;
+    }).reverse(); // Reverse to show rounds in ascending order
+    
+    // Generate unique colors for each algorithm
+    const colors = ["#00ffff", "#ff6b6b", "#5ee962"];
+    
+    // Find min and max values to set domain properly
+    let minValue = Infinity;
+    let maxValue = -Infinity;
+    
+    chartData.forEach(dataPoint => {
+      data.forEach(algorithm => {
+        const value = dataPoint[algorithm.algorithmName];
+        if (value < minValue) minValue = value;
+        if (value > maxValue) maxValue = value;
+      });
+    });
+    
+    // Ensure minimum is at least 0.1
+    minValue = Math.max(0.1, minValue);
+    
+    // Add padding to max value
+    maxValue = maxValue * 1.1;
+    
+    // Determine if we should use log scale (if max/min ratio is more than 100)
+    const useLogScale = maxValue / minValue > 100;
+    
+    return (
+      <ResponsiveContainer width="100%" height="100%">
+        <BarChart 
+          data={chartData} 
+          margin={{ top: 20, right: 30, left: 20, bottom: 50 }}
+        >
+          <CartesianGrid strokeDasharray="3 3" stroke="rgba(255, 255, 255, 0.1)" />
+          <XAxis 
+            dataKey="name" 
+            label={{ value: 'Board Size', position: 'insideBottom', offset: -10, fill: '#00ffff' }}
+            tick={{ fill: '#00ffff' }}
+          />
+          <YAxis 
+            label={{ value: 'Execution Time (ms)', angle: -90, position: 'insideLeft', offset: 10, fill: '#00ffff' }}
+            tick={{ fill: '#00ffff' }}
+            domain={useLogScale ? [minValue, maxValue] : [0, 'auto']}
+            scale={useLogScale ? 'log' : 'auto'}
+            allowDataOverflow={true}
+            tickFormatter={(value) => value.toFixed(1)}
+          />
+          <Tooltip 
+            contentStyle={{ 
+              backgroundColor: 'rgba(0, 0, 0, 0.8)', 
+              border: '1px solid #00ffff',
+              color: '#00ffff'
+            }}
+            labelStyle={{ color: '#00ffff' }}
+            formatter={(value) => [`${(value - 0.1).toFixed(2)} ms`, ``]}
+          />
+          <Legend 
+            verticalAlign="top" 
+            height={36} 
+            wrapperStyle={{ color: '#00ffff' }}
+          />
+          
+          {data.map((algorithm, index) => (
+            <Bar 
+              key={algorithm.algorithmName}
+              dataKey={algorithm.algorithmName} 
+              fill={colors[index % colors.length]} 
+              animationDuration={1500}
+            />
+          ))}
+        </BarChart>
+      </ResponsiveContainer>
+    );
+  };
+
+  const Spinner = () => {
+    return (
+      <div style={{
+        position: "absolute",
+        top: "50%",
+        left: "50%",
+        transform: "translate(-50%, -50%)",
+        zIndex: 100,
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: "20px",
+        backgroundColor: "rgba(0, 0, 0, 0.7)",
+        borderRadius: "10px",
+        border: "1px solid rgba(0, 255, 255, 0.3)",
+        boxShadow: "0 0 15px rgba(0, 255, 255, 0.2)"
+      }}>
+        <div style={{
+          width: "40px",
+          height: "40px",
+          border: "4px solid rgba(0, 255, 255, 0.3)",
+          borderTop: "4px solid #00ffff",
+          borderRadius: "50%",
+          animation: "spin 1s linear infinite",
+          marginBottom: "10px"
+        }} />
+        <div style={{
+          color: "#00ffff",
+          fontSize: "16px",
+          fontWeight: "bold"
+        }}>Loading...</div>
+        <style>{`
+          @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+          }
+        `}</style>
+      </div>
+    );
+  };
+
+  const createBoardArray = () => {
+    const board = Array(boardSize).fill().map(() => Array(boardSize).fill(-1));
+    moveHistory.current.forEach(move => {
+      if (move.moveNumber !== null) {
+        const halfSize = boardSize / 2 - 0.5;
+        const x = Math.round(move.position[0] + halfSize);
+        const y = Math.round(move.position[2] + halfSize);
+        board[y][x] = move.moveNumber - 1; // to convert to zero base indices
+      }
+    });
+    
+    return board;
+  };
+
+
+  const saveGameResults = async (gameCompleted, moveNo, startX, startY) => {
+    setIsLoading(true);
+    setServerError(null);
+    
+    try {
+      const boardArray = createBoardArray();
+      
+      const payload = {
+        username: username,
+        boardSize: boardSize,
+        moveCount: moveNo,
+        gameTime: gameTime,
+        hasCompleted: gameCompleted,
+        board: boardArray,
+        startX: startX,
+        startY: startY,
+        algorithmMetrics: {
+          "warnsdorffs": {
+            executionTime: algorithmMetrics.warnsdorff.executionTime, // milliseconds
+            memoryUsage: 0,  // kilobytes
+            branchesCovered: algorithmMetrics.warnsdorff.branchesCovered,
+            maxMovesReached: algorithmMetrics.warnsdorff.maximumNumberOfMoves,
+            hasCompleted: algorithmMetrics.warnsdorff.solutionFound,
+            board: algorithmSequences.warnsdorff,
+            hasTimedOut:algorithmMetrics.warnsdorff.timedOut
+          },
+          "backtracking": {
+            executionTime: algorithmMetrics.backtracking.executionTime, // milliseconds
+            memoryUsage: 0,  // kilobytes
+            branchesCovered: algorithmMetrics.backtracking.branchesCovered,
+            maxMovesReached: algorithmMetrics.backtracking.maximumNumberOfMoves,
+            hasCompleted: algorithmMetrics.backtracking.solutionFound,
+            board: algorithmSequences.backtracking,
+            hasTimedOut:algorithmMetrics.backtracking.timedOut
+          },
+          "backtrackingheuristic": {
+            executionTime: algorithmMetrics.backtrackingHeuristic.executionTime, // milliseconds
+            memoryUsage: 0,  // kilobytes
+            branchesCovered: algorithmMetrics.backtrackingHeuristic.branchesCovered,
+            maxMovesReached: algorithmMetrics.backtrackingHeuristic.maximumNumberOfMoves,
+            hasCompleted: algorithmMetrics.backtrackingHeuristic.solutionFound,
+            board: algorithmSequences.backtrackingHeuristic,
+            hasTimedOut:algorithmMetrics.backtrackingHeuristic.timedOut
+          }
+        }
+      };
+      
+      const response = await fetch('http://localhost:8081/pdsa/knights-tour/save-result', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload)
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Server responded with status: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      console.log('Game results saved:', data);
+      
+      // Here you can handle any additional logic after successful save
+      return true;
+    } catch (error) {
+      console.error('Error saving game results:', error);
+      setServerError(error.message);
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+
+  const handleUsernameSubmit = (name) => {
+    setUsername(name);
+    setShowUsernamePopup(false);
+    console.log(`Username set: ${name}`);
+  };
+
+  const [algorithmLoading, setAlgorithmLoading] = useState({
+    warnsdorff: false,
+    backtracking: false,
+    backtrackingHeuristic:false
+  });
+  const [algorithmMetrics, setAlgorithmMetrics] = useState({
+    warnsdorff: { executionTime: null, branchesCovered: null, maximumNumberOfMoves: 0, solutionFound: false, timedOut: false },
+    backtracking: { executionTime: null, branchesCovered: null, maximumNumberOfMoves: 0, solutionFound: false, timedOut: false },
+    backtrackingHeuristic: { executionTime: null, branchesCovered: null, maximumNumberOfMoves: 0, solutionFound:false, timedOut: false }
+  });
+
+  const controllers = {
+    warnsdorff: new AbortController(),
+    backtracking: new AbortController(),
+    backtrackingHeuristic: new AbortController()
+  };
+
+  const abortControllersRef = useRef(controllers);
+
+
+  // Add this function to your ChessBoard component
+  const generateAlgorithmSolutions = async (startY, startX) => {
+    const userSequence = visitedSquares.map(square => {
+      const halfSize = boardSize / 2 - 0.5;
+      const x = Math.floor(square.position[0] + halfSize);
+      const y = Math.floor(square.position[2] + halfSize);
+      return y * boardSize + x;
+    });
+  
+    // Set loading states
+    setAlgorithmLoading({
+      warnsdorff: true,
+      backtracking: true,
+      backtrackingHeuristic: true
+    });
+
+  
+    try {
+      // Start both algorithm calculations in parallel
+      const warnsdorffPromise = fetchSolution("warnsdorffs", startX, startY, controllers.warnsdorff.signal);
+      const backtrackingPromise = fetchSolution("backtracking", startX, startY, controllers.backtracking.signal);
+      const backtrackingHeuristicPromise = fetchSolution("backtrackingHeuristic", startX, startY, controllers.backtrackingHeuristic.signal);
+      // Handle both promises, but don't wait for both to complete
+
+      console.log("\nWe are generating algorithm solutions for the starting position (",startX,",",startY,") ... feel free to solve before the algorithm");
+      warnsdorffPromise
+        .then(data => {
+          const warnsdorffSequence = convertBoardToSequence(data.board);
+          console.log(data);
+          setAlgorithmSequences(prev => ({
+            ...prev,
+            warnsdorff: warnsdorffSequence
+          }));
+          // Store metrics
+          setAlgorithmMetrics(prev => ({
+            ...prev,
+            warnsdorff: {
+              executionTime: data.executionTime !== undefined ? data.executionTime : -1,
+              branchesCovered: data.branchesCovered !== undefined ? data.branchesCovered : -1,
+              solutionFound: data.solutionFound !== undefined ? data.solutionFound : false,
+              maximumNumberOfMoves: data.maximumMovesMade !== undefined ? data.maximumMovesMade : 0,
+              timedOut: data.timedOut !== undefined ? data.timedOut : false
+            }
+          }));
+        })
+        .catch(error => {
+          if (error.name !== 'AbortError') {
+            console.error("Warnsdorff algorithm error:", error);
+            // Set fallback data
+            setAlgorithmSequences(prev => ({
+              ...prev,
+              warnsdorff: generateDummySequence(boardSize)
+            }));
+            setAlgorithmMetrics(prev => ({
+              ...prev,
+              warnsdorff: {
+                executionTime: -1,
+                branchesCovered: -1,
+                solutionFound: false,
+                maximumNumberOfMoves: 0,
+                timedOut: false
+              }
+            }));
+          }
+        })
+        .finally(() => {
+          setAlgorithmLoading(prev => ({
+            ...prev, 
+            warnsdorff: false
+          }));
+        });
+  
+      backtrackingPromise
+        .then(data => {
+          console.log(data);
+          const backtrackingSequence = convertBoardToSequence(data.board);
+          setAlgorithmSequences(prev => ({
+            ...prev,
+            backtracking: backtrackingSequence
+          }));
+          // Store metrics
+          setAlgorithmMetrics(prev => ({
+            ...prev,
+            backtracking: {
+              executionTime: data.executionTime !== undefined ? data.executionTime : -1,
+              branchesCovered: data.branchesCovered !== undefined ? data.branchesCovered : -1,
+              solutionFound: data.solutionFound !== undefined ? data.solutionFound : false,
+              maximumNumberOfMoves: data.maximumMovesMade !== undefined ? data.maximumMovesMade : 0,
+              timedOut: data.timedOut !== undefined ? data.timedOut : false
+            }
+          }));
+        })
+        .catch(error => {
+          if (error.name !== 'AbortError') {
+            console.error("Backtracking algorithm error:", error);
+            // Set fallback data
+            setAlgorithmSequences(prev => ({
+              ...prev,
+              backtracking: generateDummySequence(boardSize)
+            }));
+            setAlgorithmMetrics(prev => ({
+              ...prev,
+              backtracking: {
+                executionTime: -1,
+                branchesCovered: -1,
+                solutionFound: false,
+                maximumNumberOfMoves: 0,
+                timedOut: false
+              }
+            }));
+          }
+        })
+        .finally(() => {
+          setAlgorithmLoading(prev => ({
+            ...prev, 
+            backtracking: false
+          }));
+        });
+
+        backtrackingHeuristicPromise
+        .then(data => {
+          console.log(data);
+          const backtrackingHeuristicSequence = convertBoardToSequence(data.board);
+          setAlgorithmSequences(prev => ({
+            ...prev,
+            backtrackingHeuristic: backtrackingHeuristicSequence
+          }));
+          // Store metrics
+          setAlgorithmMetrics(prev => ({
+            ...prev,
+            backtrackingHeuristic: {
+              executionTime: data.executionTime !== undefined ? data.executionTime : -1,
+              branchesCovered: data.branchesCovered !== undefined ? data.branchesCovered : -1,
+              solutionFound: data.solutionFound !== undefined ? data.solutionFound : false,
+              maximumNumberOfMoves: data.maximumMovesMade !== undefined ? data.maximumMovesMade : 0,
+              timedOut: data.timedOut !== undefined ? data.timedOut : false
+            }
+          }));
+        })
+        .catch(error => {
+          console.log(error.name);
+          if (error.name !== 'AbortError') {
+            console.error("Backtracking algorithm error:", error);
+            setAlgorithmSequences(prev => ({
+              ...prev,
+              backtrackingHeuristic: generateDummySequence(boardSize)
+            }));
+            setAlgorithmMetrics(prev => ({
+              ...prev,
+              backtrackingHeuristic: {
+                executionTime: -1,
+                branchesCovered: -1,
+                solutionFound: false,
+                maximumNumberOfMoves: 0,
+                timedOut: false
+              }
+            }));
+          }
+        })
+        .finally(() => {
+          setAlgorithmLoading(prev => ({
+            ...prev, 
+            backtrackingHeuristic: false
+          }));
+        });
+  
+      // Initialize user sequence
+      setAlgorithmSequences(prev => ({
+        ...prev,
+        user: userSequence
+      }));
+      
+    } catch (error) {
+      console.error("Error setting up algorithm solutions:", error);
+    }
+  };
+  
+  // Helper function to fetch a single solution
+  const fetchSolution = async (algorithm, startX, startY, signal) => {
+    const response = await fetch('http://localhost:8081/pdsa/knights-tour/solve', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        boardSize: boardSize,
+        algorithm: algorithm,
+        startX: startX,
+        startY: startY
+      }),
+      signal // Add the abort signal
+    });
+    if (!response.ok){
+      const errorMessage = response.headers.get('X-Error-Type');
+      if(errorMessage === "no-solution-found"){
+        const response3 = await response.json();
+        response3.timedOut = true;
+        return response3;
+      }
+      throw new Error("API request failed",response);
+    }
+    const response2 = await response.json();
+    response2.timedOut = false;
+    return response2;
+  };
+  
+  // Convert 2D board array to 1D sequence
+  const convertBoardToSequence = (board) => {
+    const sequence = [];
+    for (let x = 0; x < board.length; x++) {
+      for (let y = 0; y < board[x].length; y++) {
+        sequence[board[x][y]] = x * board.length + y;
+      }
+    }
+    return sequence;
+  };
+  
+  // Fallback dummy data generator
+  const generateDummySequence = (size) => {
+    return Array(size * size).fill(0).map((_, i) => i);
+  };
 
   // Start timer
   const startTimer = () => {
@@ -961,40 +1656,44 @@ const KnightsTour = () => {
   const calculateLegalMoves = (pos) => {
     if (!pos) return [];
 
-    const [x, z] = [pos[0] + 3.5, pos[2] + 3.5]; // Convert to 0-7 board coordinates
+    const halfSize = boardSize / 2 - 0.5;
+    const [x, z] = [pos[0] + halfSize, pos[2] + halfSize]; 
+
     const moves = [
       [x + 2, z + 1],
-      [x + 2, z - 1],
+      [x + 1, z + 2],
+      [x - 1, z + 2],
       [x - 2, z + 1],
       [x - 2, z - 1],
-      [x + 1, z + 2],
-      [x + 1, z - 2],
-      [x - 1, z + 2],
       [x - 1, z - 2],
+      [x + 1, z - 2],
+      [x + 2, z - 1],
     ];
 
     // Filter moves to ensure they are within the board and not visited
     return moves
       .filter(([newX, newZ]) => {
         // Check if within board boundaries
-        if (newX < 0 || newX > 7 || newZ < 0 || newZ > 7) return false;
+        if (newX < 0 || newX > boardSize - 1 || newZ < 0 || newZ > boardSize - 1 ) return false;
 
         // Check if square has been visited
-        const boardPos = [newX - 3.5, 0, newZ - 3.5];
+        const boardPos = [newX - halfSize, 0, newZ - halfSize];
         return !visitedSquares.some(
           (visited) =>
             visited.position[0] === boardPos[0] &&
             visited.position[2] === boardPos[2]
         );
       })
-      .map(([newX, newZ]) => [newX - 3.5, 0, newZ - 3.5]); // Convert back to board space
+      .map(([newX, newZ]) => [newX - halfSize, 0, newZ - halfSize]); // Convert back to board space
   };
 
   const startGame = () => {
-    const randX = Math.floor(Math.random() * 8);
-    const randZ = Math.floor(Math.random() * 8);
+    const randX = Math.floor(Math.random() * boardSize);
+    const randZ = Math.floor(Math.random() * boardSize);
 
-    const position = [randX - 3.5, 0.1, randZ - 3.5];
+    const halfSize = boardSize / 2 - 0.5;
+
+    const position = [randX - halfSize, 0.1, randZ - halfSize];
     setKnightPosition(position);
     
     // Initialize with proper move number
@@ -1006,10 +1705,22 @@ const KnightsTour = () => {
     setLegalMoves(calculateLegalMoves(position));
     setGameStarted(true);
     startTimer();
+
+    generateAlgorithmSolutions(randX, randZ);
   };
 
   // Reset the game
   const resetGame = () => {
+
+    if (abortControllersRef.current) {
+      if (abortControllersRef.current.warnsdorff) {
+        abortControllersRef.current.warnsdorff.abort();
+      }
+      if (abortControllersRef.current.backtracking) {
+        abortControllersRef.current.backtracking.abort();
+      }
+    }
+
     setKnightPosition(null);
     setTargetPosition(null);
     setIsMoving(false);
@@ -1023,6 +1734,12 @@ const KnightsTour = () => {
     setShowVictoryModal(false);
     setIsDeadEnd(false);
     resetTimer();
+    setShowResultsTab(false);
+    setSelectedAlgorithm("user");
+    setAlgorithmMetrics({
+      warnsdorff: { executionTime: null, branchesCovered: null },
+      backtracking: { executionTime: null, branchesCovered: null }
+    });
   };
 
   // Undo the last move
@@ -1049,7 +1766,7 @@ const KnightsTour = () => {
     }
   };
 
-  const handleMoveComplete = (isUndo) => {
+  const handleMoveComplete = async (isUndo) => {
     setIsMoving(false);
     if (isUndo) {
       if (moveHistory.current.length <= 1) return;
@@ -1084,17 +1801,24 @@ const KnightsTour = () => {
         setMoveCount(newMoveNumber);
         const legalMovesLocal = calculateLegalMoves(targetPosition);
         setLegalMoves(legalMovesLocal);
-
-        if (moveHistory.current.length === 64) {
+        
+        if (moveHistory.current.length === boardSize * boardSize) {
+          setGameCompleted(true);
           stopTimer();
-          setShowVictoryModal(true);
+          console.log(moveHistory);
+          await saveGameResults(true, moveHistory.current.length, moveHistory.current[0].position[2] + (boardSize / 2 - 0.5), moveHistory.current[0].position[0] + (boardSize / 2 - 0.5));
           setGameCompleted(true);
           setLegalMoves([]);
+          setShowVictoryModal(true);
+          console.log(username);
         } else if(legalMovesLocal.length === 0){
+          setGameCompleted(true);
+          stopTimer();
+          console.log(moveHistory);
+          await saveGameResults(false, moveHistory.current.length, moveHistory.current[0].position[2] + (boardSize / 2 - 0.5), moveHistory.current[0].position[0] + (boardSize / 2 - 0.5));
           setShowVictoryModal(true);
           setIsDeadEnd(true);
-          stopTimer();
-          setGameCompleted(true);
+          console.log(username);
         }
       }
     } 
@@ -1103,10 +1827,11 @@ const KnightsTour = () => {
   // Create the chessboard
   const createBoard = () => {
     const squares = [];
-    for (let i = 0; i < 8; i++) {
-      for (let j = 0; j < 8; j++) {
+    const halfSize = boardSize / 2 - 0.5;
+    for (let i = 0; i < boardSize; i++) {
+      for (let j = 0; j < boardSize; j++) {
         const isEven = (i + j) % 2 === 0;
-        const position = [i - 3.5, 0, j - 3.5];
+      const position = [i - halfSize, 0, j - halfSize];
 
         // Check if this square is a legal move
         const isLegal = legalMoves.some(
@@ -1125,6 +1850,7 @@ const KnightsTour = () => {
             isLegalMove={isLegal}
             isDeadEnd={isDeadEnd && currentPos}
             onClick={() => handleSquareClick(position)}
+            selectedAlgorithm = {selectedAlgorithm}
           />
         );
       }
@@ -1132,7 +1858,283 @@ const KnightsTour = () => {
     return squares;
   };
 
+  // Add this component inside ChessBoard but before the return statement
+  const ResultsTab = () => {
+    // Get metrics for current algorithm
+    const metrics = algorithmMetrics[selectedAlgorithm] || { executionTime: '—', branchesCovered: '—', solutionFound: '—', maximumNumberOfMoves: "—", timedOut: false };
+    
+    return (
+      <div
+        style={{
+          position: "absolute",
+          top: "50px",
+          left: "20px",
+          backgroundColor: "rgba(0, 0, 0, 0.7)",
+          padding: "20px",
+          borderRadius: "10px",
+          zIndex: 10,
+          color: "white",
+          display: "flex",
+          flexDirection: "column",
+          gap: "15px",
+          minWidth: "250px",
+          border: "1px solid rgba(0, 255, 255, 0.3)",
+          boxShadow: "0 0 15px rgba(0, 255, 255, 0.2)",
+        }}
+      >
+        <div
+          style={{
+            fontSize: "1.2rem",
+            textAlign: "center",
+            marginBottom: "10px",
+            fontWeight: "bold",
+            color: "#00ffff",
+            textShadow: "0 0 5px rgba(0, 255, 255, 0.5)",
+          }}
+        >
+          Results Comparison
+        </div>
+        
+        <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+          <div style={{ display: "flex", gap: "10px" }}>
+            <button
+              onClick={() => setSelectedAlgorithm("user")}
+              style={{
+                flex: 1,
+                padding: "8px",
+                backgroundColor: selectedAlgorithm === "user" ? "#00ffff" : "#4a4a4a",
+                color: selectedAlgorithm === "user" ? "black" : "white",
+                border: "1px solid rgba(255, 255, 255, 0.3)",
+                borderRadius: "5px",
+                cursor: "pointer",
+              }}
+            >
+              Your Path
+            </button>
+          
+            <button
+              onClick={() => setSelectedAlgorithm("warnsdorff")}
+              style={{
+                flex: 1,
+                padding: "8px",
+                backgroundColor: selectedAlgorithm === "warnsdorff" ? "#00ffff" : "#4a4a4a",
+                color: selectedAlgorithm === "warnsdorff" ? "black" : "white",
+                border: "1px solid rgba(255, 255, 255, 0.3)",
+                borderRadius: "5px",
+                cursor: "pointer",
+                position: "relative",
+              }}
+            >
+              Warnsdorff
+              {algorithmLoading.warnsdorff && (
+                <span style={{
+                  position: "absolute",
+                  top: "2px",
+                  right: "2px",
+                  width: "10px",
+                  height: "10px",
+                  borderRadius: "50%",
+                  backgroundColor: "#ffff00",
+                }}></span>
+              )}
+            </button>
+          </div>
+          
+          <div style={{ display: "flex", gap: "10px" }}>
+            <button
+              onClick={() => setSelectedAlgorithm("backtracking")}
+              style={{
+                flex: 1,
+                padding: "8px",
+                backgroundColor: selectedAlgorithm === "backtracking" ? "#00ffff" : "#4a4a4a",
+                color: selectedAlgorithm === "backtracking" ? "black" : "white",
+                border: "1px solid rgba(255, 255, 255, 0.3)",
+                borderRadius: "5px",
+                cursor: "pointer",
+                position: "relative",
+              }}
+            >
+              Backtracking
+              {algorithmLoading.backtracking && (
+                <span style={{
+                  position: "absolute",
+                  top: "2px",
+                  right: "2px",
+                  width: "10px",
+                  height: "10px",
+                  borderRadius: "50%",
+                  backgroundColor: "#ffff00",
+                }}></span>
+              )}
+            </button>
+            
+            <button
+              onClick={() => setSelectedAlgorithm("backtrackingHeuristic")}
+              style={{
+                flex: 1,
+                padding: "8px",
+                backgroundColor: selectedAlgorithm === "backtrackingHeuristic" ? "#00ffff" : "#4a4a4a",
+                color: selectedAlgorithm === "backtrackingHeuristic" ? "black" : "white",
+                border: "1px solid rgba(255, 255, 255, 0.3)",
+                borderRadius: "5px",
+                cursor: "pointer",
+                position: "relative",
+              }}
+            >
+              BacktrackingHeuristic
+              {algorithmLoading.backtrackingHeuristic && (
+                <span style={{
+                  position: "absolute",
+                  top: "2px",
+                  right: "2px",
+                  width: "10px",
+                  height: "10px",
+                  borderRadius: "50%",
+                  backgroundColor: "#ffff00",
+                }}></span>
+              )}
+            </button>
+          </div>
+        </div>
+        
+        <div
+          style={{
+            textAlign: "center",
+            padding: "10px",
+            backgroundColor: "rgba(0, 255, 255, 0.1)",
+            borderRadius: "5px",
+            border: "1px solid rgba(0, 255, 255, 0.2)",
+          }}
+        >
+          <div style={{ fontSize: "0.9rem", marginBottom: "5px" }}>
+            Algorithm
+          </div>
+          <div
+            style={{
+              fontSize: "1.2rem",
+              fontWeight: "bold",
+              color: "#00ffff",
+            }}
+          >
+            {selectedAlgorithm === "user" ? "Your Solution" : 
+            selectedAlgorithm === "warnsdorff" ? "Warnsdorff's Algorithm" 
+            : selectedAlgorithm === "backtrackingHeuristic" ? "Backtracking Heuristic" :
+            "Backtracking Algorithm"}
+          </div>
+        </div>
+        
+        {/* New sections for algorithm metrics */}
+        {selectedAlgorithm !== "user" && (
+          <>
+            <div
+              style={{
+                textAlign: "center",
+                padding: "10px",
+                backgroundColor: "rgba(0, 255, 255, 0.1)",
+                borderRadius: "5px",
+                border: "1px solid rgba(0, 255, 255, 0.2)",
+              }}
+            >
+              <div style={{ fontSize: "0.9rem", marginBottom: "5px" }}>
+                Execution Time
+              </div>
+              <div
+                style={{
+                  fontSize: "1.2rem",
+                  fontWeight: "bold",
+                  color: "#00ffff",
+                }}
+              >
+                {metrics.executionTime !== null ?
+                   metrics.timedOut ? "—" :
+                  `${metrics.executionTime.toFixed(2)} ms` :
+                  "Calculating..."}
+              </div>
+            </div>
+            
+            <div
+              style={{
+                textAlign: "center",
+                padding: "10px",
+                backgroundColor: "rgba(0, 255, 255, 0.1)",
+                borderRadius: "5px",
+                border: "1px solid rgba(0, 255, 255, 0.2)",
+              }}
+            >
+              <div style={{ fontSize: "0.9rem", marginBottom: "5px" }}>
+                Solution Found
+              </div>
+              <div
+                style={{
+                  fontSize: "1.2rem",
+                  fontWeight: "bold",
+                  color: "#00ffff",
+                }}
+              >
+                {(metrics.solutionFound !== null 
+                  && !metrics.timedOut) ? 
+                  (metrics.solutionFound === true ? "TRUE" : "FALSE")
+                  : "Calculating..."}
+              </div>
+            </div>
+
+            <div
+              style={{
+                textAlign: "center",
+                padding: "10px",
+                backgroundColor: "rgba(0, 255, 255, 0.1)",
+                borderRadius: "5px",
+                border: "1px solid rgba(0, 255, 255, 0.2)",
+              }}
+            >
+              <div style={{ fontSize: "0.9rem", marginBottom: "5px" }}>
+                Branches Covered
+              </div>
+              <div
+                style={{
+                  fontSize: "1.2rem",
+                  fontWeight: "bold",
+                  color: "#00ffff",
+                }}
+              >
+                {metrics.branchesCovered !== null 
+                  ? metrics.branchesCovered.toLocaleString() 
+                  : "Calculating..."}
+              </div>
+            </div>
+
+            <div
+              style={{
+                textAlign: "center",
+                padding: "10px",
+                backgroundColor: "rgba(0, 255, 255, 0.1)",
+                borderRadius: "5px",
+                border: "1px solid rgba(0, 255, 255, 0.2)",
+              }}
+            >
+              <div style={{ fontSize: "0.9rem", marginBottom: "5px" }}>
+                Maximum moves
+              </div>
+              <div
+                style={{
+                  fontSize: "1.2rem",
+                  fontWeight: "bold",
+                  color: "#00ffff",
+                }}
+              >
+                {(metrics.maximumNumberOfMoves !== null)  ?
+                  metrics.maximumNumberOfMoves :
+                  "Calculating..."}
+              </div>
+            </div>
+          </>
+        )}
+      </div>
+    );
+  };
+
   return (
+    
     <div
       style={{
         width: "100%",
@@ -1141,6 +2143,10 @@ const KnightsTour = () => {
         overflow: "hidden",
       }}
     >
+
+      {isLoading && <Spinner />}
+
+      {showUsernamePopup && <UsernamePopup onSubmit={handleUsernameSubmit} />}
       {/* Fixed 2D Starry Background */}
       <StarryBackground />
 
@@ -1205,32 +2211,63 @@ const KnightsTour = () => {
         </div>
 
         {!gameStarted ? (
-          <button
-            onClick={startGame}
-            style={{
-              padding: "12px 24px",
-              fontSize: "18px",
-              backgroundColor: "#4a4a4a",
-              color: "white",
-              border: "1px solid #00ffff",
-              borderRadius: "5px",
-              cursor: "pointer",
-              boxShadow: "0 0 15px rgba(0, 255, 255, 0.5)",
-              transition: "transform 0.1s, box-shadow 0.1s",
-            }}
-            onMouseDown={(e) => {
-              e.currentTarget.style.transform = "translateY(2px)";
-              e.currentTarget.style.boxShadow =
-                "0 0 8px rgba(0, 255, 255, 0.5)";
-            }}
-            onMouseUp={(e) => {
-              e.currentTarget.style.transform = "translateY(0)";
-              e.currentTarget.style.boxShadow =
-                "0 0 15px rgba(0, 255, 255, 0.5)";
-            }}
-          >
-            Start Game
-          </button>
+          <>
+            <div style={{
+              marginBottom: "15px",
+              textAlign: "center"
+            }}>
+              <label style={{
+                display: "block",
+                marginBottom: "5px",
+                color: "#00ffff"
+              }}>
+                Select Board Size:
+              </label>
+              <select 
+                value={boardSize}
+                onChange={(e) => setBoardSize(parseInt(e.target.value))}
+                style={{
+                  padding: "8px",
+                  borderRadius: "5px",
+                  backgroundColor: "#4a4a4a",
+                  color: "white",
+                  border: "1px solid #00ffff",
+                  width: "100%"
+                }}
+              >
+                <option value={5}>5x5</option>
+                <option value={6}>6x6</option>
+                <option value={7}>7x7</option>
+                <option value={8}>8x8</option>
+              </select>
+            </div>
+            <button
+              onClick={startGame}
+              style={{
+                padding: "12px 24px",
+                fontSize: "18px",
+                backgroundColor: "#4a4a4a",
+                color: "white",
+                border: "1px solid #00ffff",
+                borderRadius: "5px",
+                cursor: "pointer",
+                boxShadow: "0 0 15px rgba(0, 255, 255, 0.5)",
+                transition: "transform 0.1s, box-shadow 0.1s",
+              }}
+              onMouseDown={(e) => {
+                e.currentTarget.style.transform = "translateY(2px)";
+                e.currentTarget.style.boxShadow =
+                  "0 0 8px rgba(0, 255, 255, 0.5)";
+              }}
+              onMouseUp={(e) => {
+                e.currentTarget.style.transform = "translateY(0)";
+                e.currentTarget.style.boxShadow =
+                  "0 0 15px rgba(0, 255, 255, 0.5)";
+              }}
+            >
+              Start Game
+            </button>
+          </>
         ) : (
           <>
             <button
@@ -1274,6 +2311,8 @@ const KnightsTour = () => {
                 onClose={() => setShowVictoryModal(false)} 
                 isDefeat={isDeadEnd}
                 resetGame={resetGame}
+                boardSize={boardSize}
+                setShowResultsTab={setShowResultsTab}
               />
             )}
 
@@ -1325,7 +2364,38 @@ const KnightsTour = () => {
             </div>
           </>
         )}
+        {!gameStarted && (
+            <button
+            onClick={() => {
+              fetchMetricsData(); // Call the fetch function
+              setShowMetricsChart(true);
+            }}
+            style={{
+              padding: "10px",
+              fontSize: "16px",
+              backgroundColor: "#3F51B5",
+              color: "white",
+              border: "1px solid rgba(255, 255, 255, 0.3)",
+              borderRadius: "5px",
+              cursor: "pointer",
+              transition: "all 0.2s",
+              marginTop: "10px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "8px",
+            }}
+          >
+            <span style={{ fontSize: "18px" }}>📊</span>
+            View Algorithm Metrics
+          </button>
+          )}
+          
       </div>
+
+      {gameCompleted && showResultsTab && <ResultsTab />}
+
+      {showMetricsChart && <AlgorithmMetricsChart />}
 
       {/* 3D Chess Board Scene */}
       <div
@@ -1353,7 +2423,7 @@ const KnightsTour = () => {
 
           <group>
           <mesh position={[0, -0.1, 0]} receiveShadow>
-            <boxGeometry args={[8.6, 0.2, 8.6]} />
+            <boxGeometry args={[boardSize  + 0.6, 0.2, boardSize  + 0.6]} />
             <meshStandardMaterial 
               color="#00C0F9" 
               transparent={true}
@@ -1366,28 +2436,62 @@ const KnightsTour = () => {
           </mesh>
             {createBoard()}
 
-            {/* Number markers for visited squares */}
-            {gameStarted &&
-              visitedSquares.map(
-                (visited, index) =>
-                  visited.moveNumber !== null && (
+            {gameStarted && 
+              (selectedAlgorithm === "user" ? 
+                visitedSquares.map(
+                  (visited, index) =>
+                    visited.moveNumber !== null && (
+                      <NumberMarker
+                        key={`marker-${index}`}
+                        position={visited.position}
+                        number={visited.moveNumber}
+                      />
+                    )
+                ) : 
+                
+                algorithmSequences[selectedAlgorithm].map((squareIndex, moveNumber) => {
+                  const x = squareIndex % boardSize;
+                  const z = Math.floor(squareIndex / boardSize);
+                  const halfSize = boardSize / 2 - 0.5;
+                  const position = [x - halfSize, 0, z - halfSize];
+                  
+                  return (
                     <NumberMarker
-                      key={`marker-${index}`}
-                      position={visited.position}
-                      number={visited.moveNumber}
+                      key={`algo-marker-${moveNumber}`}
+                      position={position}
+                      number={moveNumber + 1}
                     />
-                  )
-              )}
+                  );
+                })
+              )
+            }
 
             {gameStarted && (
               <Suspense fallback={null}>
-                <AnimatedKnight
-                  currentPos={knightPosition}
-                  targetPos={targetPosition || knightPosition}
-                  isMoving={isMoving}
-                  onMoveComplete={handleMoveComplete}
-                  isUndoMove={isUndoMove}
-                />
+                {selectedAlgorithm === "user" ? (
+                  <AnimatedKnight
+                    currentPos={knightPosition}
+                    targetPos={targetPosition || knightPosition}
+                    isMoving={isMoving}
+                    onMoveComplete={handleMoveComplete}
+                    isUndoMove={isUndoMove}
+                  />
+                ) : (
+                  // Position knight at the last position of the algorithm path
+                  (() => {
+                    const sequence = algorithmSequences[selectedAlgorithm];
+                    if (sequence.length > 0) {
+                      const lastSquareIndex = sequence[sequence.length - 1];
+                      const x = lastSquareIndex % boardSize;
+                      const z = Math.floor(lastSquareIndex / boardSize);
+                      const halfSize = boardSize / 2 - 0.5;
+                      const position = [x - halfSize, 0.1, z - halfSize];
+                      
+                      return <KnightModel position={position} />;
+                    }
+                    return null;
+                  })()
+                )}
               </Suspense>
             )}
           </group>
@@ -1404,4 +2508,4 @@ const KnightsTour = () => {
   );
 };
 
-export default KnightsTour;
+export default ChessBoard;
