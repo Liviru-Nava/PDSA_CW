@@ -1,5 +1,8 @@
 package com.example.pdsa_backend.service.travelingsalesmanservice;
 
+import com.example.pdsa_backend.data.travelingsalesmandata.GameResultRepository;
+import com.example.pdsa_backend.data.travelingsalesmandata.PerformanceMetricRepository;
+import com.example.pdsa_backend.data.travelingsalesmandata.PlayerRepository;
 import com.example.pdsa_backend.data.travelingsalesmandata.TravelingSalesmanResultRepository;
 import com.example.pdsa_backend.dto.travelingsalesmandto.TSPRequest;
 import com.example.pdsa_backend.dto.travelingsalesmandto.TSPSolution;
@@ -21,16 +24,16 @@ import static org.junit.jupiter.api.Assertions.fail;
 public class TSPAlgorithmTest {
 
     @Mock
-    private com.example.pdsa_backend.data.PlayerRepository playerRepository;
+    private PlayerRepository playerRepository;
 
     @Mock
-    private com.example.pdsa_backend.data.GameResultRepository gameResultRepository;
+    private GameResultRepository gameResultRepository;
 
     @Mock
     private TravelingSalesmanResultRepository travelingSalesmanResultRepository;
 
     @Mock
-    private com.example.pdsa_backend.data.PerformanceMetricRepository performanceMetricRepository;
+    private PerformanceMetricRepository performanceMetricRepository;
 
     @InjectMocks
     private TSPService tspService;

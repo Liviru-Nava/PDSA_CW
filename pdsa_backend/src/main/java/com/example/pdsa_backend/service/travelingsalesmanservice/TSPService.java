@@ -1,8 +1,6 @@
 package com.example.pdsa_backend.service.travelingsalesmanservice;
 
-import com.example.pdsa_backend.data.*;
-import com.example.pdsa_backend.data.travelingsalesmandata.TravelingSalesmanResult;
-import com.example.pdsa_backend.data.travelingsalesmandata.TravelingSalesmanResultRepository;
+import com.example.pdsa_backend.data.travelingsalesmandata.*;
 import com.example.pdsa_backend.dto.travelingsalesmandto.TSPGameResult;
 import com.example.pdsa_backend.dto.travelingsalesmandto.TSPRequest;
 import com.example.pdsa_backend.dto.travelingsalesmandto.TSPResponse;
@@ -354,8 +352,8 @@ public class TSPService {
         TSPSolution solution = new TSPSolution(); //has algorithm name, optimized route, total distance and executionTime
         solution.setAlgorithmName("Held-Karp (Dynamic Programming)");
 
-        int n = cities.size();
-        int homeIndex = 0;
+        int n = cities.size();  //10
+        int homeIndex = 0;      //home is at 0
 
         // Initialize memoization table
         // dp[mask][last] = minimum distance of path covering all cities in mask and ending at city 'last'
@@ -365,7 +363,7 @@ public class TSPService {
 
         // Base case: starting at city 0 (home)
         for (int i = 1; i < n; i++) {
-            int mask = 1 << i; // mask with only city i
+            int mask = 1 << i; //mask with only city i (when i = 1, mask = 2,
             Map<Integer, Integer> innerMap = dp.getOrDefault(mask, new HashMap<>());
             innerMap.put(i, distanceMatrix[homeIndex][i]);
             dp.put(mask, innerMap);

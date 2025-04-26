@@ -1,7 +1,5 @@
 package com.example.pdsa_backend.service.travelingsalesmanservice;
-import com.example.pdsa_backend.data.*;
-import com.example.pdsa_backend.data.travelingsalesmandata.TravelingSalesmanResult;
-import com.example.pdsa_backend.data.travelingsalesmandata.TravelingSalesmanResultRepository;
+import com.example.pdsa_backend.data.travelingsalesmandata.*;
 import com.example.pdsa_backend.dto.travelingsalesmandto.TSPGameResult;
 import com.example.pdsa_backend.dto.travelingsalesmandto.TSPRequest;
 import com.example.pdsa_backend.dto.travelingsalesmandto.TSPResponse;

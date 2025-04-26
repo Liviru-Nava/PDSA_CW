@@ -885,9 +885,7 @@ const TravelingSalesman = () => {
             body: JSON.stringify(gameResultRequest),
           });
         }
-        
       }
-      
     } catch (error) {
       console.error('Failed to solve TSP:', error);
       alert('Failed to communicate with the server. Please try again.');
