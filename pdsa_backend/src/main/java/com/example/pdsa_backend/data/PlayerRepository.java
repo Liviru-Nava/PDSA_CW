@@ -9,8 +9,9 @@ import org.springframework.data.repository.query.Param;
 import java.time.LocalDateTime;
 import java.util.Optional;
 
+import java.util.Optional;
+
 public interface PlayerRepository extends JpaRepository<Player, Integer> {
-    Optional<Player> findByUsername(String username);
 
     @Modifying
     @Transactional
@@ -19,4 +20,9 @@ public interface PlayerRepository extends JpaRepository<Player, Integer> {
 
     @Query("SELECT p.playerId From Player p WHERE p.username = :username")
     int getPlayerIdByUsername(@Param("username") String username);
+  
+    boolean existsByUsername(String username);
+  
+    Optional<Player> findByUsername(String username);
+
 }

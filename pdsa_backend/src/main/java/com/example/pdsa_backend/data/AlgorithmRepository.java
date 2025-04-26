@@ -9,11 +9,16 @@ import org.springframework.data.repository.query.Param;
 import java.util.List;
 import java.util.Optional;
 
-public interface AlgorithmRepository extends JpaRepository<Algorithm, Integer> {
+import java.util.List;
 
+public interface AlgorithmRepository extends JpaRepository<Algorithm, Integer> {
     @Query("SELECT a FROM Algorithm a WHERE a.gameId = :gameid ")
     List<Algorithm> getTicTacToeGameAlgorithms(@Param("gameid") int gameid);
 
     @Query("SELECT a.algorithmId FROM Algorithm a WHERE a.algorithmName = :algorithmName")
     int getAlgorithumIdByGameId(@Param("algorithmName") String algorithmName);
+  
+    Algorithm findByGameIdAndAlgorithmName(int gameId, String algorithmName);
+  
+    List<Algorithm> findByGameId(int gameId);
 }

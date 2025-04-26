@@ -8,6 +8,14 @@ const Dashboard = () => {
   const mountRef = useRef(null);
   const [hoveredCard, setHoveredCard] = useState(null);
   const [activeCategory, setActiveCategory] = useState('all');
+
+  //player name states
+  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [selectedGame, setSelectedGame] = useState(null);
+  const [playerId, setPlayerId] = useState(null);
+  const [username, setUsername] = useState('');
+  const [loginError, setLoginError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   
   const games = [
     {
@@ -247,10 +255,66 @@ const Dashboard = () => {
     };
   }, []);
   
-  const navigateToGame = (route) => {
-    navigate(route);
+  const navigateToGame = (game) => {
+    if (game.id === 'salesman') {
+      setSelectedGame(game);
+      setShowLoginModal(true);
+      setUsername('');
+      setLoginError('');
+    } else {
+      navigate(game.route);
+    }
   };
   
+  const handleLoginSubmit = async (e) => {
+    e.preventDefault();
+    if (!username.trim()) {
+      setLoginError('Username cannot be empty');
+      return;
+    }
+  
+    setIsLoading(true);
+    setLoginError('');
+    
+    try {
+      // Check if username exists
+      const checkResponse = await fetch(`http://localhost:8081/pdsa/check?username=${username}`, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      const checkResult = await checkResponse.json();
+      
+      if (checkResult.exists) {
+        setLoginError('Username already exists.');
+        setIsLoading(false);
+        setPlayerId(checkResult.playerId);
+        return;
+      }
+      
+      // Register the player
+      const registerResponse = await fetch('http://localhost:8081/pdsa/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username })
+      });
+      const result = await registerResponse.json();
+      
+      const player_id = result.playerId;
+      setPlayerId(player_id);
+      
+      // Close modal and navigate
+      setShowLoginModal(false);
+      navigate(selectedGame.route, { 
+        state: { playerId: result.playerId, username: result.username }
+      });
+    } catch (err) {
+      setLoginError('Error connecting to server. Please try again.');
+      console.error('Login error:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-black text-white overflow-hidden">
       {/* Improved contrast overlay */}
@@ -321,7 +385,7 @@ const Dashboard = () => {
               className="relative group"
               onMouseEnter={() => setHoveredCard(game.id)}
               onMouseLeave={() => setHoveredCard(null)}
-              onClick={() => navigateToGame(game.route)}
+              onClick={() => navigateToGame(game)}
             >
               <div 
                 className="h-full rounded-xl shadow-lg p-5 cursor-pointer transition-all duration-300 ease-in-out transform hover:scale-105 backdrop-blur-sm bg-opacity-80 border border-transparent hover:border-opacity-50"
@@ -374,6 +438,81 @@ const Dashboard = () => {
           </div>
         </footer>
       </div>
+
+      {/* Login Modal */}
+      {showLoginModal && (
+        <div className="fixed inset-0 flex items-center justify-center z-50">
+          <div className="absolute inset-0 bg-black opacity-70" onClick={() => setShowLoginModal(false)}></div>
+          <div className="bg-gray-800 rounded-xl p-6 w-full max-w-md relative z-10 border border-purple-500 shadow-lg shadow-purple-500/30">
+            <h2 className="text-2xl font-bold mb-4 text-white">Enter Your Username</h2>
+            <p className="text-gray-300 mb-6">Please enter a username to play {selectedGame?.title}</p>
+            
+            <form onSubmit={handleLoginSubmit}>
+              <input
+                type="text"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                className="w-full bg-gray-700 text-white border border-gray-600 rounded-lg px-4 py-2 mb-4 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                placeholder="Username"
+                autoFocus
+              />
+              
+              {loginError === 'Username already exists.' ? (
+                <div className="bg-blue-900 bg-opacity-30 p-4 rounded-lg mb-4 border border-blue-500">
+                  <p className="text-blue-300 mb-2">This username already exists.</p>
+                  <p className="text-white">Is this you?</p>
+                  <div className="flex gap-3 mt-3">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        // Continue with existing user
+                        setShowLoginModal(false);
+                        navigate(selectedGame.route, { 
+                          state: { playerId: playerId, username: username }
+                        });
+                      }}
+                      className="flex-1 px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition"
+                    >
+                      Yes, continue
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setLoginError('');
+                        setUsername('');
+                      }}
+                      className="flex-1 px-4 py-2 rounded-lg bg-gray-700 text-gray-300 hover:bg-gray-600 transition"
+                    >
+                      No, use different name
+                    </button>
+                  </div>
+                </div>
+              ) : loginError ? (
+                <div className="text-red-400 mb-4 bg-red-900 bg-opacity-30 p-2 rounded-lg">
+                  {loginError}
+                </div>
+              ) : null}
+              
+              <div className="flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowLoginModal(false)}
+                  className="px-4 py-2 rounded-lg bg-gray-700 text-gray-300 hover:bg-gray-600 transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isLoading || loginError === 'exists'}
+                  className="px-4 py-2 rounded-lg bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:from-purple-700 hover:to-pink-700 transition"
+                >
+                  {isLoading ? 'Loading...' : 'Play Game'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
