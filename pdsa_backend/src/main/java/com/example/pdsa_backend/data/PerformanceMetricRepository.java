@@ -1,7 +1,6 @@
-package com.example.pdsa_backend.data.travelingsalesmandata;
+package com.example.pdsa_backend.data;
 
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Query;
 
 import java.util.List;
 import java.util.Optional;
