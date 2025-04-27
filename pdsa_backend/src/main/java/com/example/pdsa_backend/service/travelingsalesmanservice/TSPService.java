@@ -451,6 +451,9 @@ public class TSPService {
                 mask = mask & ~(1 << current);
                 current = next;
             }
+            
+            //reverse the list for proper path generation
+            Collections.reverse(path);
 
             // Get memory after execution
             int memoryAfter = measureMemoryUsage();
