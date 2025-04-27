@@ -7,4 +7,5 @@ import java.util.Optional;
 
 public interface PerformanceMetricRepository extends JpaRepository<PerformanceMetric, Integer> {
     Optional<PerformanceMetric> findByResultIdAndAlgorithmId(int resultId, int algorithmId);
+    List<PerformanceMetric> findByResultId(int resultId);
 }
