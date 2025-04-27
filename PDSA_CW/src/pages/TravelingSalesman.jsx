@@ -1,7 +1,8 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useLocation } from 'react-router-dom';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
 
 // City data with coordinates
 const CITY_DATA = [
@@ -42,6 +43,13 @@ const TravelingSalesman = () => {
   //timer states
   const [timer, setTimer] = useState(0);
   const [solveTime, setSolveTime] = useState(null);
+
+  //view distance matrix
+  const [showDistanceMatrix, setShowDistanceMatrix] = useState(false);
+
+  //state for the algorithmPerformance
+  const [algorithmPerformance, setAlgorithmPerformance] = useState(null);
+  const [showAlgorithmDetails, setShowAlgorithmDetails] = useState(false);
 
   //animated dots for round number
   const [roundDots, setRoundDots] = useState(".");
@@ -186,6 +194,7 @@ const TravelingSalesman = () => {
     cameraRef.current = null;
   };
   
+  //for home city selection
   useEffect(() => {
     homeCityRef.current = homeCity;
     selectedCitiesRef.current = selectedCities;
@@ -884,6 +893,9 @@ const TravelingSalesman = () => {
             },
             body: JSON.stringify(gameResultRequest),
           });
+          
+          const saveResult = await response.json();
+          setAlgorithmPerformance(saveResult);
         }
       }
     } catch (error) {
@@ -951,21 +963,147 @@ const TravelingSalesman = () => {
     setDistances(newDistances);
   };
 
+  //function to render distance matrix
+  const DistanceMatrix = ({ distances, cityData, show, onClose }) => {
+    if (!show) return null;
+    
+    // Get city names for headers
+    const cityNames = cityData.map(city => city.name);
+    
+    return (
+      <div className="absolute right-4 bottom-16 z-30 bg-black bg-opacity-90 border border-cyan-500 rounded shadow-lg p-4 max-h-[70vh] overflow-auto">
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-cyan-300 font-bold text-lg">Distance Matrix (km)</h3>
+          <button 
+            onClick={onClose}
+            className="text-cyan-300 hover:text-white"
+          >
+            ✕
+          </button>
+        </div>
+        
+        <div className="overflow-x-auto">
+          <table className="text-sm text-cyan-200">
+            <thead>
+              <tr>
+                <th className="p-2 border border-cyan-800"></th>
+                {cityNames.map(name => (
+                  <th key={name} className="p-2 border border-cyan-800 font-bold">{name}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {cityData.map(city => (
+                <tr key={city.id}>
+                  <th className="p-2 border border-cyan-800 font-bold">{city.name}</th>
+                  {cityData.map(targetCity => (
+                    <td key={`${city.id}-${targetCity.id}`} className="p-2 border border-cyan-800 text-center">
+                      {city.id === targetCity.id ? 
+                        '—' : 
+                        distances[city.id]?.[targetCity.id] ?? '?'}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    );
+  };
+
+  //function to render the algorithm performance pop up
+  const AlgorithmPerformancePopup = ({ show, onClose, data }) => {
+    if (!show || !data || !data.algorithmPerformances) return null;
+  
+    const performanceData = useMemo(() => {
+      return data.algorithmPerformances
+        .map(alg => ({
+          name: alg.algorithmName,
+          executionTime: alg.executionTimeMs,
+        }))
+        .sort((a, b) => a.executionTime - b.executionTime);
+    }, [data.algorithmPerformances]);
+  
+    return (
+      <div className="fixed inset-0 flex items-center justify-center z-50">
+        <div className="absolute inset-0 bg-black bg-opacity-70" onClick={onClose}></div>
+        <div className="bg-black p-6 rounded-lg border-2 border-cyan-400 shadow-lg z-50 text-center w-full max-w-2xl mx-4">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-2xl text-cyan-300 font-bold font-alien">Algorithm Performance</h2>
+            <button 
+              onClick={onClose}
+              className="text-cyan-300 hover:text-white"
+            >
+              ✕
+            </button>
+          </div>
+          
+          <div key="performance-chart" className="w-full mb-6" style={{ height: "250px" }}>
+            {/* Responsive line chart */}
+            <LineChart 
+              width={window.innerWidth > 768 ? 500 : 300} 
+              height={250} 
+              data={performanceData} 
+              margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+            >
+              <CartesianGrid strokeDasharray="3 3" stroke="#444" />
+              <XAxis dataKey="name" stroke="#8dd1e1" />
+              <YAxis stroke="#8dd1e1" label={{ value: 'Execution Time (ms)', angle: -90, position: 'insideLeft', fill: '#8dd1e1' }} />
+              <Tooltip contentStyle={{ backgroundColor: '#000', borderColor: '#00a0ff' }} />
+              <Legend />
+              <Line 
+                type="monotone" 
+                dataKey="executionTime" 
+                stroke="#00ffff" 
+                strokeWidth={2} 
+                activeDot={{ r: 8 }} 
+                isAnimationActive={false}
+              />
+            </LineChart>
+          </div>
+          
+          <div className="mt-6 text-left">
+            <h3 className="text-xl text-cyan-300 mb-2">Performance Details</h3>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm text-cyan-200">
+                <thead>
+                  <tr className="bg-cyan-900 bg-opacity-40">
+                    <th className="p-2 text-left">Algorithm</th>
+                    <th className="p-2 text-right">Execution Time (ms)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {performanceData.map((alg, index) => (
+                    <tr key={index} className={index % 2 === 0 ? 'bg-blue-900 bg-opacity-20' : ''}>
+                      <td className="p-2 text-left">{alg.name}</td>
+                      <td className="p-2 text-right">{alg.executionTime}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="relative w-full h-screen bg-black text-cyan-300 overflow-hidden">
       <div ref={mountRef} className="w-full h-full"></div>
       
       {/* Main Control Panel - adjusted with max-height and overflow handling */}
       <div className="absolute top-4 left-4 bg-black bg-opacity-80 p-4 rounded shadow-lg border border-cyan-500 z-20 max-w-md max-h-[calc(100vh-32px)] flex flex-col overflow-hidden">
-        <h2 className="text-xl font-bold mb-2 text-cyan-300">Space Transport Network</h2>
+        <h2 className="text-xl font-bold mb-2 text-cyan-300">Traveling Space Salesman</h2>
         
         {/* Stats Section */}
         <div className="mb-4 text-cyan-100">
           <p className="font-semibold mb-1">
-            Home Station: {homeCity ? cityObjectsRef.current[homeCity]?.name : 'Not Selected'}
+            Home Space City: {homeCity ? cityObjectsRef.current[homeCity]?.name : 'Not Selected'}
           </p>
           <p className="font-semibold mb-1">
-            Stations in Route: {selectedCities.length}
+            Cities in Route: {selectedCities.length}
           </p>
           <p className="font-semibold">
             Total Distance: {totalDistance} km
@@ -981,8 +1119,8 @@ const TravelingSalesman = () => {
         <div className="mb-4">
           <p className="text-sm italic mb-2 text-cyan-200">
             {!homeCity 
-              ? 'Click on a station to select it as your home base' 
-              : 'Now click stations to add them to your route'}
+              ? 'Click on a city to select it as your home base' 
+              : 'Now click other cities to add them to your route'}
           </p>
           <div className="flex space-x-2">
             <button 
@@ -1014,7 +1152,7 @@ const TravelingSalesman = () => {
         
         {/* Station Selection Grid - with flex-shrink-0 to prevent unwanted shrinking */}
         <div className="mb-4 flex-shrink-0">
-          <h3 className="font-semibold mb-2 text-cyan-300">Available Stations:</h3>
+          <h3 className="font-semibold mb-2 text-cyan-300">Available Cities:</h3>
           <div className="grid grid-cols-2 gap-2">
             {CITY_DATA.map(city => (
               <button
@@ -1102,14 +1240,14 @@ const TravelingSalesman = () => {
       </div>
 
       {/* Player and Round display */}
-      <div className="absolute top-4 right-4 bg-black bg-opacity-80 p-4 rounded shadow-lg border border-cyan-500 z-20 text-right">
-        <h3 className="font-bold text-cyan-300 mb-1 text-xl font-alien">{username}</h3>
-        <div className="text-cyan-300 font-bold font-alien">
+      <div className="absolute top-4 right-4 bg-black bg-opacity-80 p-4 rounded shadow-lg border border-cyan-500 z-20 text-right w-58">
+        <div className="text-cyan-300 font-bold font-alien text-left text-2xl mb-4">
           Round {currentRound}{roundDots}
         </div>
+        <h3 className="font-bold text-cyan-300 mb-1 text-xl font-alien text-left">{username}</h3>
 
         {/* Timer display */}
-        <div className="text-cyan-300 mt-2">
+        <div className="text-cyan-300 mt-2 text-left">
           Time: {Math.floor(timer / 60)}:{(timer % 60).toString().padStart(2, '0')}
         </div>
         
@@ -1140,7 +1278,13 @@ const TravelingSalesman = () => {
           <div className="bg-gradient-to-r from-blue-900 to-purple-900 p-8 rounded-lg border-2 border-cyan-400 shadow-lg shadow-cyan-500/50 z-50 text-center max-w-md transform scale-110 animate-pulse">
             <h2 className="text-3xl text-cyan-300 font-bold mb-4 font-alien">CONGRATULATIONS!</h2>
             <p className="text-xl text-white mb-6">You've found the optimal interstellar route!</p>
-            <div className="flex justify-center">
+            <div className="flex justify-center space-x-4">
+              <button 
+                onClick={() => setShowAlgorithmDetails(true)}
+                className="bg-gradient-to-r from-green-600 to-blue-700 text-white px-6 py-3 rounded-lg hover:from-green-500 hover:to-blue-600 transition-all font-bold text-lg"
+              >
+                View Algorithm Details
+              </button>
               <button 
                 onClick={handlePlayAgain}
                 className="bg-gradient-to-r from-cyan-600 to-blue-700 text-white px-6 py-3 rounded-lg hover:from-cyan-500 hover:to-blue-600 transition-all font-bold text-lg"
@@ -1151,6 +1295,31 @@ const TravelingSalesman = () => {
           </div>
         </div>
       )}
+
+      {/* View Distance Matrix Button */}
+      <div className="absolute bottom-4 right-4 z-20">
+        <button 
+          onClick={() => setShowDistanceMatrix(!showDistanceMatrix)}
+          className="bg-blue-900 text-white px-4 py-2 rounded hover:bg-blue-700 transition-colors"
+        >
+          {showDistanceMatrix ? 'Hide' : 'View'} Distance Matrix
+        </button>
+      </div>
+
+      {/* Render the Distance Matrix */}
+      <DistanceMatrix 
+        distances={distances}
+        cityData={CITY_DATA}
+        show={showDistanceMatrix}
+        onClose={() => setShowDistanceMatrix(false)}
+      />
+
+      {/* Add this at the end of your return statement */}
+      <AlgorithmPerformancePopup 
+        show={showAlgorithmDetails} 
+        onClose={() => setShowAlgorithmDetails(false)} 
+        data={algorithmPerformance} 
+      />
     </div>
   );
 }
