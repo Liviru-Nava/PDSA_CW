@@ -38,7 +38,7 @@ public class TSPService {
 
         if (userExists) {
             // Retrieve the player ID only if the username exists
-            Player player = playerRepository.findByUsername(username);
+            Player player = playerRepository.findByUsername(username).get();
             userResult.put("playerId", player.getPlayerId());
         }
         return userResult;
