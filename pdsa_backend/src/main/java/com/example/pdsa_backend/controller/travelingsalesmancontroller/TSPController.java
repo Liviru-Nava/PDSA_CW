@@ -1,7 +1,8 @@
 package com.example.pdsa_backend.controller.travelingsalesmancontroller;
 
-import com.example.pdsa_backend.data.Player;
+import com.example.pdsa_backend.data.travelingsalesmandata.Player;
 import com.example.pdsa_backend.dto.travelingsalesmandto.TSPGameResult;
+import com.example.pdsa_backend.dto.travelingsalesmandto.TSPGameResultResponse;
 import com.example.pdsa_backend.dto.travelingsalesmandto.TSPRequest;
 import com.example.pdsa_backend.dto.travelingsalesmandto.TSPResponse;
 import com.example.pdsa_backend.service.travelingsalesmanservice.TSPService;
@@ -40,8 +41,8 @@ public class TSPController {
 
     //save result to database
     @PostMapping("/save")
-    public ResponseEntity<?> saveGameResult(@RequestBody TSPGameResult request){
-        tspService.saveGameResult(request);
-        return ResponseEntity.ok(Map.of("message", "Game Result saved successfully!"));
+    public ResponseEntity<TSPGameResultResponse> saveGameResult(@RequestBody TSPGameResult request){
+        TSPGameResultResponse algorithmResponse = tspService.saveGameResult(request);
+        return ResponseEntity.ok(algorithmResponse);
     }
 }
