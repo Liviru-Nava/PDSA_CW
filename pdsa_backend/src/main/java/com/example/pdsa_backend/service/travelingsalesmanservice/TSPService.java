@@ -1,5 +1,6 @@
 package com.example.pdsa_backend.service.travelingsalesmanservice;
 
+import com.example.pdsa_backend.data.*;
 import com.example.pdsa_backend.data.travelingsalesmandata.*;
 import com.example.pdsa_backend.dto.travelingsalesmandto.*;
 import org.springframework.beans.factory.annotation.Autowired;
