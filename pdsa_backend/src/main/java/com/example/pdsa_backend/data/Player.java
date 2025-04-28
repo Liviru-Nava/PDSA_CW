@@ -46,7 +46,7 @@ public class Player {
         this.registrationDate = registrationDate;
     }
 
-    public LocalDateTime getLastLogin(LocalTime now) {
+    public LocalDateTime getLastLogin() {
         return lastLogin;
     }
 

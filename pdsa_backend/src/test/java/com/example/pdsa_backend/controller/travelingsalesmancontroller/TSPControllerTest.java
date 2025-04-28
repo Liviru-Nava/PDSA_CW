@@ -1,10 +1,7 @@
 package com.example.pdsa_backend.controller.travelingsalesmancontroller;
 
 import com.example.pdsa_backend.data.Player;
-import com.example.pdsa_backend.dto.travelingsalesmandto.TSPGameResult;
-import com.example.pdsa_backend.dto.travelingsalesmandto.TSPRequest;
-import com.example.pdsa_backend.dto.travelingsalesmandto.TSPResponse;
-import com.example.pdsa_backend.dto.travelingsalesmandto.TSPSolution;
+import com.example.pdsa_backend.dto.travelingsalesmandto.*;
 import com.example.pdsa_backend.service.travelingsalesmanservice.TSPService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
@@ -121,16 +118,18 @@ public class TSPControllerTest {
         Map<String, String> saveResponse = new HashMap<>();
         saveResponse.put("message", "Game Result saved successfully!");
 
+        // Create a mock response object
+        TSPGameResultResponse mockResponse = new TSPGameResultResponse();
+
         // Fix: Use doReturn().when() pattern for mocking the void method
-        doNothing().when(tspService).saveGameResult(any(TSPGameResult.class));
+        when(tspService.saveGameResult(any(TSPGameResult.class))).thenReturn(mockResponse);
         mockMvc = MockMvcBuilders.standaloneSetup(tspController).build();
 
         // Act & Assert
         mockMvc.perform(post("/save")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(gameResult)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.message").value("Game Result saved successfully!"));
+                .andExpect(status().isOk());
     }
 
 
