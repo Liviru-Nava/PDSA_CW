@@ -11,14 +11,16 @@ public class KTSolution implements Serializable {
     private final long executionTime;
     private final String errorMessage;
     private final int maximumMovesMade;
+    private final long memoryUsageKB;
 
     public KTSolution(int boardSize, String algorithm, int[][] board, boolean solutionFound,
-                      long branchesCovered, long executionTime,int maximumMovesMade) {
-        this(boardSize, algorithm, board, solutionFound, branchesCovered, executionTime, maximumMovesMade, null);
+                      long branchesCovered, long executionTime,int maximumMovesMade,long memoryUsageKB) {
+        this(boardSize, algorithm, board, solutionFound, branchesCovered, executionTime, maximumMovesMade, null,memoryUsageKB);
     }
 
     public KTSolution(int boardSize, String algorithm, int[][] board, boolean solutionFound,
-                      long branchesCovered, long executionTime, int maximumMovesMade, String errorMessage) {
+                      long branchesCovered, long executionTime, int maximumMovesMade, String errorMessage,
+                      long memoryUsageKB) {
         this.boardSize = boardSize;
         this.algorithm = algorithm;
         this.board = board;
@@ -27,6 +29,7 @@ public class KTSolution implements Serializable {
         this.executionTime = executionTime;
         this.errorMessage = errorMessage;
         this.maximumMovesMade = maximumMovesMade;
+        this.memoryUsageKB = memoryUsageKB;
     }
 
     public int getBoardSize() {
@@ -59,5 +62,9 @@ public class KTSolution implements Serializable {
 
     public int getMaximumMovesMade() {
         return maximumMovesMade;
+    }
+
+    public long getMemoryUsageKB() {
+        return memoryUsageKB;
     }
 }

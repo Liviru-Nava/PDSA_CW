@@ -73,16 +73,32 @@ public class KnightsTourService {
         validateInputParameters(boardSize, startX, startY, algorithm);
 
         try {
-            if (algorithm.toLowerCase().equals("warnsdorffs") || algorithm.toLowerCase().equals("backtracking") || algorithm.toLowerCase().equals("backtrackingheuristic")) {
+            if (algorithm.equalsIgnoreCase("warnsdorffs") || algorithm.equalsIgnoreCase("backtracking") || algorithm.equalsIgnoreCase("backtrackingheuristic")) {
+                Runtime runtime = Runtime.getRuntime();
+                System.gc();
+                long memoryBefore = runtime.totalMemory() - runtime.freeMemory();
                 KTSolution sol = solveKnightsTour(boardSize, startX, startY,algorithm);
+                System.gc();
+                long memoryAfter = runtime.totalMemory() - runtime.freeMemory();
+                long memoryUsageKB = Math.abs(memoryAfter - memoryBefore) / 1024;
                 logger.info("Solved: {}, Time taken: {} ms, Branches covered: {}",
                         sol.isSolutionFound(), sol.getExecutionTime(), sol.getBranchesCovered());
-                return sol;
+                return new KTSolution(
+                        sol.getBoardSize(),
+                        sol.getAlgorithm(),
+                        sol.getBoard(),
+                        sol.isSolutionFound(),
+                        sol.getBranchesCovered(),
+                        sol.getExecutionTime(),
+                        sol.getMaximumMovesMade(),
+                        sol.getErrorMessage(),
+                        memoryUsageKB
+                );
             } else {
                 // For now, just return dummy data for other algorithms
                 logger.info("Using dummy implementation for algorithm: {}", algorithm);
                 int[][] board = createDummyBoard(boardSize);
-                return new KTSolution(boardSize, algorithm, board, false, 1, 2,5);
+                return new KTSolution(boardSize, algorithm, board, false, 0, 0,0,0);
             }
         } catch (Exception e) {
             logger.error("Error executing Knight's Tour algorithm: {}", e.getMessage(), e);
@@ -124,15 +140,14 @@ public class KnightsTourService {
      * Solve Knight's Tour using Warnsdorff's algorithm
      */
     private KTSolution solveKnightsTour(int size, int startRow, int startCol,String algorithm ) {
-        int board[][] = new int[size][size];
-        long timeOut = 3000;
+        long timeOut = 90000;
         try {
             AbstractKnightsTour kt;
-            if(algorithm.toLowerCase().equals("warnsdorffs"))
+            if(algorithm.equalsIgnoreCase("warnsdorffs"))
                 kt = new KnightsTourWarnsdorffs(size, size);
-            else if(algorithm.toLowerCase().equals("backtracking"))
+            else if(algorithm.equalsIgnoreCase("backtracking"))
                 kt = new KnightsTourBacktracking(size, size);
-            else if(algorithm.toLowerCase().equals("backtrackingheuristic"))
+            else if(algorithm.equalsIgnoreCase("backtrackingheuristic"))
                 kt = new KnightsTourBacktrackHeuristic(size, size);
             else
                 throw new InvalidParameterException("Unsupported algorithm: " + algorithm);
@@ -145,11 +160,11 @@ public class KnightsTourService {
             long endTime = System.currentTimeMillis();
             long elapsedTime = endTime - startTime;
 
-            return new KTSolution(size, algorithm, kt.getMaxProgressBoard(), solved, kt.getBranchesCovered(), elapsedTime, kt.getMaxMovesReached());
+            return new KTSolution(size, algorithm, kt.getMaxProgressBoard(), solved, kt.getBranchesCovered(), elapsedTime, kt.getMaxMovesReached(),0);
         } catch (TimeoutException e) {
             logger.warn("Knight's Tour algorithm timed out: {}", e.getMessage());
             return new KTSolution(size, algorithm, e.getSolver().getMaxProgressBoard(), false, e.getSolver().getBranchesCovered(), timeOut,
-                    e.getSolver().getMaxMovesReached(),"Algorithm timed out: " + e.getMessage());
+                    e.getSolver().getMaxMovesReached(),"Algorithm timed out: " + e.getMessage(),0);
         } catch (Exception e) {
             logger.error("Error in Knight's Tour algorithm: {}", e.getMessage(), e);
             throw new AlgorithmExecutionException("Error executing Knight's Tour algorithm: " + e.getMessage(), e);

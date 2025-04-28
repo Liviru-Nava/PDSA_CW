@@ -627,7 +627,7 @@ const UsernamePopup = ({ onSubmit }) => {
 };
 
 // Celebration component with enhanced confetti effects
-const Celebration = ({ moveCount, gameTime, onClose, isDefeat = false, resetGame, boardSize, setShowResultsTab }) => {
+const Celebration = ({ moveCount, gameTime, onClose, isDefeat = false, restartGame, boardSize, setShowResultsTab }) => {
   // Create confetti particles on component mount (only for victory)
   useEffect(() => {
     // Don't show confetti for defeat scenario
@@ -642,7 +642,7 @@ const Celebration = ({ moveCount, gameTime, onClose, isDefeat = false, resetGame
     confettiCanvas.style.width = '100%';
     confettiCanvas.style.height = '100%';
     confettiCanvas.style.pointerEvents = 'none';
-    confettiCanvas.style.zIndex = '999';
+    confettiCanvas.style.zIndex = '1001';
     document.body.appendChild(confettiCanvas);
 
     const ctx = confettiCanvas.getContext('2d');
@@ -757,7 +757,7 @@ const Celebration = ({ moveCount, gameTime, onClose, isDefeat = false, resetGame
         display: 'flex',
         justifyContent: 'center',
         alignItems: 'center',
-        zIndex: 1000,
+        zIndex: 1001,
       }}
     >
       {/* Message card for victory or defeat */}
@@ -793,7 +793,7 @@ const Celebration = ({ moveCount, gameTime, onClose, isDefeat = false, resetGame
         >
           {isDefeat 
             ? 'You have no more legal moves available. Your knight is trapped!' 
-            : `You've completed the Knight's Tour by visiting all ${boardSize} the squares!`}
+            : `You've completed the Knight's Tour by visiting all ${boardSize * boardSize} the squares!`}
         </p>
         <div 
           style={{
@@ -837,13 +837,12 @@ const Celebration = ({ moveCount, gameTime, onClose, isDefeat = false, resetGame
           <button 
             onClick={function(){
               if(isDefeat){
-                resetGame();
-                console.log("Here");
+                restartGame();
               }else{
                 onClose(false);
                 setShowResultsTab(true);
               }
-            }} // Pass false to indicate normal close
+            }}
             style={{
               padding: '12px 25px',
               fontSize: '18px',
@@ -1026,6 +1025,7 @@ const formatTime = (seconds) => {
 
 // Main ChessBoard component
 const ChessBoard = () => {
+  const [chartType,setChartType] = useState("executionTimes"); // Default chart type
   const [showUsernamePopup, setShowUsernamePopup] = useState(true);
   const [username, setUsername] = useState("");
   const [gameStarted, setGameStarted] = useState(false);
@@ -1053,6 +1053,10 @@ const ChessBoard = () => {
     backtrackingHeuristic:[]
   });
 
+  const[noOfAttempts, setNoOfAttempts] = useState(1); // Number of attempts made by the user
+
+  const [startPosition, setStartPosition] = useState([0, 0]); // Starting position of the knight
+
   const [isLoading, setIsLoading] = useState(false);
   const [serverError, setServerError] = useState(null);
   const [showMetricsChart, setShowMetricsChart] = useState(false);
@@ -1068,7 +1072,11 @@ const ChessBoard = () => {
         throw new Error(`Failed to fetch metrics data: ${response.status}`);
       }
       const data = await response.json();
-      setMetricsData(data);
+      if(data.message){
+        setServerError(data.message);
+        return;
+      }
+      setMetricsData(data); 
     } catch (err) {
       console.error("Error fetching metrics data:", err);
       setServerError("Failed to load algorithm metrics. Please try again later.");
@@ -1077,7 +1085,10 @@ const ChessBoard = () => {
     }
   };
 
-  const AlgorithmMetricsChart = () => {        
+
+  //const [chartType,setChartType] = useState("executionTime");  use this 
+  const AlgorithmMetricsChart = () => {
+          
     return (
       <div style={{
         position: "fixed",
@@ -1128,6 +1139,48 @@ const ChessBoard = () => {
             Algorithm Performance Metrics
           </h2>
           
+          {/* Radio button group for metric selection */}
+          <div style={{
+            display: "flex",
+            justifyContent: "center",
+            marginBottom: "20px",
+            gap: "20px"
+          }}>
+            <label style={{ 
+              color: chartType === "executionTimes" ? "#00ffff" : "#a0a0a0",
+              display: "flex",
+              alignItems: "center",
+              cursor: "pointer"
+            }}>
+              <input 
+                type="radio" 
+                name="chartType" 
+                value="executionTimes"
+                checked={chartType === "executionTimes"}
+                onChange={() => setChartType("executionTimes")}
+                style={{ marginRight: "5px" }}
+              />
+              Execution Time
+            </label>
+            
+            <label style={{ 
+              color: chartType === "memoryUsages" ? "#00ffff" : "#a0a0a0",
+              display: "flex",
+              alignItems: "center",
+              cursor: "pointer"
+            }}>
+              <input 
+                type="radio" 
+                name="chartType" 
+                value="memoryUsages"
+                checked={chartType === "memoryUsages"}
+                onChange={() => setChartType("memoryUsages")}
+                style={{ marginRight: "5px" }}
+              />
+              Memory Usage
+            </label>
+          </div>
+          
           {isLoading ? (
             <div style={{
               display: "flex",
@@ -1143,7 +1196,7 @@ const ChessBoard = () => {
                 animation: "spin 1s linear infinite"
               }} />
             </div>
-          ) : serverError ? (
+          ) : (serverError) ? (
             <div style={{
               color: "#ff6b6b",
               textAlign: "center",
@@ -1153,29 +1206,35 @@ const ChessBoard = () => {
             </div>
           ) : (
             <div style={{ height: "400px" }}>
-              <MetricsBarChart data={metricsData} />
+              <MetricsBarChart data={metricsData} chartType={chartType} />
             </div>
           )}
         </div>
       </div>
     );
   };
-
-  const MetricsBarChart = ({ data }) => {
+  
+  const MetricsBarChart = ({ data, chartType }) => {
     if (!data || data.length === 0) {
-      return <div style={{ color: "#00ffff", textAlign: "center" }}>No data available</div>;
+      return <div className="text-cyan-400 text-center">No data available</div>;
+    } else if (data.message){
+      return <div className="text-cyan-400 text-center">{data.message}</div>;
     }
     
-    // Process data for the chart - let's restructure it for a bar chart
+    // Determine which metric unit to display
+    const metricUnit = chartType === "executionTimes" ? "ms" : "KB";
+    const metricLabel = chartType === "executionTimes" ? "Execution Time (ms)" : "Memory Usage (KB)";
+    
+    // Process data for the chart - restructure it for a bar chart
     const chartData = data[0].rounds.map((round, index) => {
       const dataPoint = { 
-        name: `${round}x${round}`,  // Board size as name
+        name: `${round}`,  // Just the round number as name
       };
       
       data.forEach(algorithm => {
-        // For each algorithm, add execution time for this round index
+        // For each algorithm, add the selected metric for this round index
         // Add a small offset to ensure logarithmic scale works (avoid 0 values)
-        dataPoint[algorithm.algorithmName] = (algorithm.executionTimes[index] || 0) + 0.1;
+        dataPoint[algorithm.algorithmName] = (algorithm[chartType][index] || 0) + 0.1;
       });
       
       return dataPoint;
@@ -1205,20 +1264,75 @@ const ChessBoard = () => {
     // Determine if we should use log scale (if max/min ratio is more than 100)
     const useLogScale = maxValue / minValue > 100;
     
+    // Map for shortening algorithm names in tooltip
+    const algorithmShortNames = {
+      'Warnsdorff': 'Warns',
+      'Backtracking': 'BT',
+      'BacktrackingHeuristic': 'BT Heuristic'
+    };
+    
+    // Custom tooltip to properly align values
+    const CustomTooltip = ({ active, payload, label }) => {
+      if (active && payload && payload.length) {
+        return (
+          <div style={{ 
+            backgroundColor: 'rgba(7, 52, 97, 0.9)',
+            border: '1px solid #00ffff',
+            color: '#00ffff',
+            padding: '10px',
+            borderRadius: '3px'
+          }}>
+            <p style={{ color: '#00ffff', margin: '0 0 5px 0' }}>Result ID: {label}</p>
+            {payload.map((entry, index) => {
+              const shortName = algorithmShortNames[entry.name] || entry.name;
+              const value = (entry.value - 0.1).toFixed(2);
+              
+              // Create a fixed width for algorithm names to align values
+              return (
+                <p key={`item-${index}`} style={{ 
+                  color: entry.color, 
+                  margin: '2px 0',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  width: '160px' // Fixed width for alignment
+                }}>
+                  <span>{shortName}:</span>
+                  <span>{value} {metricUnit}</span>
+                </p>
+              );
+            })}
+          </div>
+        );
+      }
+      return null;
+    };
+    
     return (
       <ResponsiveContainer width="100%" height="100%">
         <BarChart 
           data={chartData} 
-          margin={{ top: 20, right: 30, left: 20, bottom: 50 }}
+          margin={{ top: 20, right: 30, left: 45, bottom: 70 }}
         >
           <CartesianGrid strokeDasharray="3 3" stroke="rgba(255, 255, 255, 0.1)" />
           <XAxis 
             dataKey="name" 
-            label={{ value: 'Board Size', position: 'insideBottom', offset: -10, fill: '#00ffff' }}
+            label={{ 
+              value: 'Result ID', 
+              position: 'insideBottom', 
+              offset: -35,
+              fill: '#00ffff' 
+            }}
             tick={{ fill: '#00ffff' }}
           />
           <YAxis 
-            label={{ value: 'Execution Time (ms)', angle: -90, position: 'insideLeft', offset: 10, fill: '#00ffff' }}
+            label={{ 
+              value: metricLabel, 
+              angle: -90, 
+              position: 'center',
+              dx: -60,
+              dy: 0,
+              fill: '#00ffff' 
+            }}
             tick={{ fill: '#00ffff' }}
             domain={useLogScale ? [minValue, maxValue] : [0, 'auto']}
             scale={useLogScale ? 'log' : 'auto'}
@@ -1226,18 +1340,16 @@ const ChessBoard = () => {
             tickFormatter={(value) => value.toFixed(1)}
           />
           <Tooltip 
-            contentStyle={{ 
-              backgroundColor: 'rgba(0, 0, 0, 0.8)', 
-              border: '1px solid #00ffff',
-              color: '#00ffff'
-            }}
-            labelStyle={{ color: '#00ffff' }}
-            formatter={(value) => [`${(value - 0.1).toFixed(2)} ms`, ``]}
+            content={<CustomTooltip />}
+            cursor={{ fill: 'rgba(23, 83, 144, 0.3)' }} // Dark blue semi-transparent hover effect
           />
           <Legend 
             verticalAlign="top" 
-            height={36} 
+            height={36}
             wrapperStyle={{ color: '#00ffff' }}
+            formatter={(value) => {
+              return algorithmShortNames[value] || value;
+            }}
           />
           
           {data.map((algorithm, index) => (
@@ -1321,7 +1433,7 @@ const ChessBoard = () => {
         username: username,
         boardSize: boardSize,
         moveCount: moveNo,
-        gameTime: gameTime,
+        gameTime: gameTime + 1,
         hasCompleted: gameCompleted,
         board: boardArray,
         startX: startX,
@@ -1329,7 +1441,7 @@ const ChessBoard = () => {
         algorithmMetrics: {
           "warnsdorffs": {
             executionTime: algorithmMetrics.warnsdorff.executionTime, // milliseconds
-            memoryUsage: 0,  // kilobytes
+            memoryUsage: algorithmMetrics.warnsdorff.memoryUsageKB,  // kilobytes
             branchesCovered: algorithmMetrics.warnsdorff.branchesCovered,
             maxMovesReached: algorithmMetrics.warnsdorff.maximumNumberOfMoves,
             hasCompleted: algorithmMetrics.warnsdorff.solutionFound,
@@ -1338,7 +1450,7 @@ const ChessBoard = () => {
           },
           "backtracking": {
             executionTime: algorithmMetrics.backtracking.executionTime, // milliseconds
-            memoryUsage: 0,  // kilobytes
+            memoryUsage: algorithmMetrics.backtracking.memoryUsageKB,  // kilobytes
             branchesCovered: algorithmMetrics.backtracking.branchesCovered,
             maxMovesReached: algorithmMetrics.backtracking.maximumNumberOfMoves,
             hasCompleted: algorithmMetrics.backtracking.solutionFound,
@@ -1347,7 +1459,7 @@ const ChessBoard = () => {
           },
           "backtrackingheuristic": {
             executionTime: algorithmMetrics.backtrackingHeuristic.executionTime, // milliseconds
-            memoryUsage: 0,  // kilobytes
+            memoryUsage: algorithmMetrics.backtrackingHeuristic.memoryUsageKB,  // kilobytes
             branchesCovered: algorithmMetrics.backtrackingHeuristic.branchesCovered,
             maxMovesReached: algorithmMetrics.backtrackingHeuristic.maximumNumberOfMoves,
             hasCompleted: algorithmMetrics.backtrackingHeuristic.solutionFound,
@@ -1396,9 +1508,9 @@ const ChessBoard = () => {
     backtrackingHeuristic:false
   });
   const [algorithmMetrics, setAlgorithmMetrics] = useState({
-    warnsdorff: { executionTime: null, branchesCovered: null, maximumNumberOfMoves: 0, solutionFound: false, timedOut: false },
-    backtracking: { executionTime: null, branchesCovered: null, maximumNumberOfMoves: 0, solutionFound: false, timedOut: false },
-    backtrackingHeuristic: { executionTime: null, branchesCovered: null, maximumNumberOfMoves: 0, solutionFound:false, timedOut: false }
+    warnsdorff: { executionTime: null, branchesCovered: null, maximumNumberOfMoves: 0, solutionFound: false, timedOut: false, memoryUsageKB: 0 },
+    backtracking: { executionTime: null, branchesCovered: null, maximumNumberOfMoves: 0, solutionFound: false, timedOut: false, memoryUsageKB: 0 },
+    backtrackingHeuristic: { executionTime: null, branchesCovered: null, maximumNumberOfMoves: 0, solutionFound:false, timedOut: false, memoryUsageKB: 0 }
   });
 
   const controllers = {
@@ -1451,6 +1563,7 @@ const ChessBoard = () => {
               branchesCovered: data.branchesCovered !== undefined ? data.branchesCovered : -1,
               solutionFound: data.solutionFound !== undefined ? data.solutionFound : false,
               maximumNumberOfMoves: data.maximumMovesMade !== undefined ? data.maximumMovesMade : 0,
+              memoryUsageKB: data.memoryUsageKB !== undefined ? data.memoryUsageKB : 0,
               timedOut: data.timedOut !== undefined ? data.timedOut : false
             }
           }));
@@ -1470,6 +1583,7 @@ const ChessBoard = () => {
                 branchesCovered: -1,
                 solutionFound: false,
                 maximumNumberOfMoves: 0,
+                memoryUsageKB: 0,
                 timedOut: false
               }
             }));
@@ -1498,6 +1612,7 @@ const ChessBoard = () => {
               branchesCovered: data.branchesCovered !== undefined ? data.branchesCovered : -1,
               solutionFound: data.solutionFound !== undefined ? data.solutionFound : false,
               maximumNumberOfMoves: data.maximumMovesMade !== undefined ? data.maximumMovesMade : 0,
+              memoryUsageKB: data.memoryUsageKB !== undefined ? data.memoryUsageKB : 0,
               timedOut: data.timedOut !== undefined ? data.timedOut : false
             }
           }));
@@ -1517,6 +1632,7 @@ const ChessBoard = () => {
                 branchesCovered: -1,
                 solutionFound: false,
                 maximumNumberOfMoves: 0,
+                memoryUsageKB: 0,
                 timedOut: false
               }
             }));
@@ -1545,6 +1661,7 @@ const ChessBoard = () => {
               branchesCovered: data.branchesCovered !== undefined ? data.branchesCovered : -1,
               solutionFound: data.solutionFound !== undefined ? data.solutionFound : false,
               maximumNumberOfMoves: data.maximumMovesMade !== undefined ? data.maximumMovesMade : 0,
+              memoryUsageKB: data.memoryUsageKB !== undefined ? data.memoryUsageKB : 0,
               timedOut: data.timedOut !== undefined ? data.timedOut : false
             }
           }));
@@ -1564,6 +1681,7 @@ const ChessBoard = () => {
                 branchesCovered: -1,
                 solutionFound: false,
                 maximumNumberOfMoves: 0,
+                memoryUsageKB: 0,
                 timedOut: false
               }
             }));
@@ -1691,12 +1809,11 @@ const ChessBoard = () => {
     const randX = Math.floor(Math.random() * boardSize);
     const randZ = Math.floor(Math.random() * boardSize);
 
-    const halfSize = boardSize / 2 - 0.5;
+    setStartPosition([randX, randZ]);
 
+    const halfSize = boardSize / 2 - 0.5;
     const position = [randX - halfSize, 0.1, randZ - halfSize];
     setKnightPosition(position);
-    
-    // Initialize with proper move number
     const initialMove = { position, moveNumber: 1 };
     setVisitedSquares([initialMove]);
     setMoveCount(1);
@@ -1711,13 +1828,39 @@ const ChessBoard = () => {
 
   // Reset the game
   const resetGame = () => {
+    // Stop the current timer and restart it
+    stopTimer();
+    startTimer();
+    setMoveCount(0);
+    moveHistory.current = [];
+    setVisitedSquares([]);
+    setMoveCount(0);
+    setLegalMoves([]);
+    setNoOfAttempts(noOfAttempts+1);
+  
+    const halfSize = boardSize / 2 - 0.5;
+    const position = [startPosition[0] - halfSize, 0.1, startPosition[1] - halfSize];
+    setTargetPosition(position);
+    setIsMoving(true); 
+  
+    setGameCompleted(false);
+    setIsDeadEnd(false);
+    setShowVictoryModal(false);
+    setGameStarted(true);
+    setSelectedAlgorithm("user");
+  }
 
+
+  const restartGame = () => {
     if (abortControllersRef.current) {
       if (abortControllersRef.current.warnsdorff) {
         abortControllersRef.current.warnsdorff.abort();
       }
       if (abortControllersRef.current.backtracking) {
         abortControllersRef.current.backtracking.abort();
+      }
+      if (abortControllersRef.current.backtrackingHeuristic) {
+        abortControllersRef.current.backtrackingHeuristic.abort();
       }
     }
 
@@ -1736,11 +1879,13 @@ const ChessBoard = () => {
     resetTimer();
     setShowResultsTab(false);
     setSelectedAlgorithm("user");
+    setNoOfAttempts(1);
     setAlgorithmMetrics({
       warnsdorff: { executionTime: null, branchesCovered: null },
-      backtracking: { executionTime: null, branchesCovered: null }
+      backtracking: { executionTime: null, branchesCovered: null },
+      backtrackingHeuristic: { executionTime: null, branchesCovered: null }
     });
-  };
+  }
 
   // Undo the last move
   const undoMove = () => {
@@ -1810,15 +1955,13 @@ const ChessBoard = () => {
           setGameCompleted(true);
           setLegalMoves([]);
           setShowVictoryModal(true);
-          console.log(username);
         } else if(legalMovesLocal.length === 0){
           setGameCompleted(true);
           stopTimer();
           console.log(moveHistory);
-          await saveGameResults(false, moveHistory.current.length, moveHistory.current[0].position[2] + (boardSize / 2 - 0.5), moveHistory.current[0].position[0] + (boardSize / 2 - 0.5));
+          //await saveGameResults(false, moveHistory.current.length, moveHistory.current[0].position[2] + (boardSize / 2 - 0.5), moveHistory.current[0].position[0] + (boardSize / 2 - 0.5));
           setShowVictoryModal(true);
           setIsDeadEnd(true);
-          console.log(username);
         }
       }
     } 
@@ -1861,32 +2004,41 @@ const ChessBoard = () => {
   // Add this component inside ChessBoard but before the return statement
   const ResultsTab = () => {
     // Get metrics for current algorithm
-    const metrics = algorithmMetrics[selectedAlgorithm] || { executionTime: '—', branchesCovered: '—', solutionFound: '—', maximumNumberOfMoves: "—", timedOut: false };
+    const metrics = algorithmMetrics[selectedAlgorithm] || { 
+      executionTime: 0, 
+      branchesCovered: 0, 
+      solutionFound: false, 
+      maximumNumberOfMoves: 0, 
+      timedOut: false, 
+      memoryUsageKB: 0 
+    };
     
     return (
       <div
         style={{
           position: "absolute",
-          top: "50px",
-          left: "20px",
+          top: "40px",
+          left: "15px",
           backgroundColor: "rgba(0, 0, 0, 0.7)",
-          padding: "20px",
-          borderRadius: "10px",
+          padding: "15px",
+          borderRadius: "8px",
           zIndex: 10,
           color: "white",
           display: "flex",
           flexDirection: "column",
-          gap: "15px",
-          minWidth: "250px",
+          gap: "10px",
+          minWidth: "225px",
           border: "1px solid rgba(0, 255, 255, 0.3)",
-          boxShadow: "0 0 15px rgba(0, 255, 255, 0.2)",
+          boxShadow: "0 0 12px rgba(0, 255, 255, 0.2)",
+          maxHeight: "85vh",
+          overflowY: "auto"
         }}
       >
         <div
           style={{
-            fontSize: "1.2rem",
+            fontSize: "1.1rem",
             textAlign: "center",
-            marginBottom: "10px",
+            marginBottom: "5px",
             fontWeight: "bold",
             color: "#00ffff",
             textShadow: "0 0 5px rgba(0, 255, 255, 0.5)",
@@ -1895,18 +2047,19 @@ const ChessBoard = () => {
           Results Comparison
         </div>
         
-        <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-          <div style={{ display: "flex", gap: "10px" }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+          <div style={{ display: "flex", gap: "6px" }}>
             <button
               onClick={() => setSelectedAlgorithm("user")}
               style={{
                 flex: 1,
-                padding: "8px",
+                padding: "6px",
                 backgroundColor: selectedAlgorithm === "user" ? "#00ffff" : "#4a4a4a",
                 color: selectedAlgorithm === "user" ? "black" : "white",
                 border: "1px solid rgba(255, 255, 255, 0.3)",
-                borderRadius: "5px",
+                borderRadius: "4px",
                 cursor: "pointer",
+                fontSize: "0.9rem"
               }}
             >
               Your Path
@@ -1916,13 +2069,14 @@ const ChessBoard = () => {
               onClick={() => setSelectedAlgorithm("warnsdorff")}
               style={{
                 flex: 1,
-                padding: "8px",
+                padding: "6px",
                 backgroundColor: selectedAlgorithm === "warnsdorff" ? "#00ffff" : "#4a4a4a",
                 color: selectedAlgorithm === "warnsdorff" ? "black" : "white",
                 border: "1px solid rgba(255, 255, 255, 0.3)",
-                borderRadius: "5px",
+                borderRadius: "4px",
                 cursor: "pointer",
                 position: "relative",
+                fontSize: "0.9rem"
               }}
             >
               Warnsdorff
@@ -1931,8 +2085,8 @@ const ChessBoard = () => {
                   position: "absolute",
                   top: "2px",
                   right: "2px",
-                  width: "10px",
-                  height: "10px",
+                  width: "8px",
+                  height: "8px",
                   borderRadius: "50%",
                   backgroundColor: "#ffff00",
                 }}></span>
@@ -1940,18 +2094,19 @@ const ChessBoard = () => {
             </button>
           </div>
           
-          <div style={{ display: "flex", gap: "10px" }}>
+          <div style={{ display: "flex", gap: "6px" }}>
             <button
               onClick={() => setSelectedAlgorithm("backtracking")}
               style={{
                 flex: 1,
-                padding: "8px",
+                padding: "6px",
                 backgroundColor: selectedAlgorithm === "backtracking" ? "#00ffff" : "#4a4a4a",
                 color: selectedAlgorithm === "backtracking" ? "black" : "white",
                 border: "1px solid rgba(255, 255, 255, 0.3)",
-                borderRadius: "5px",
+                borderRadius: "4px",
                 cursor: "pointer",
                 position: "relative",
+                fontSize: "0.9rem"
               }}
             >
               Backtracking
@@ -1960,8 +2115,8 @@ const ChessBoard = () => {
                   position: "absolute",
                   top: "2px",
                   right: "2px",
-                  width: "10px",
-                  height: "10px",
+                  width: "8px",
+                  height: "8px",
                   borderRadius: "50%",
                   backgroundColor: "#ffff00",
                 }}></span>
@@ -1972,23 +2127,24 @@ const ChessBoard = () => {
               onClick={() => setSelectedAlgorithm("backtrackingHeuristic")}
               style={{
                 flex: 1,
-                padding: "8px",
+                padding: "6px",
                 backgroundColor: selectedAlgorithm === "backtrackingHeuristic" ? "#00ffff" : "#4a4a4a",
                 color: selectedAlgorithm === "backtrackingHeuristic" ? "black" : "white",
                 border: "1px solid rgba(255, 255, 255, 0.3)",
-                borderRadius: "5px",
+                borderRadius: "4px",
                 cursor: "pointer",
                 position: "relative",
+                fontSize: "0.85rem"
               }}
             >
-              BacktrackingHeuristic
+              BT-Heuristic
               {algorithmLoading.backtrackingHeuristic && (
                 <span style={{
                   position: "absolute",
                   top: "2px",
                   right: "2px",
-                  width: "10px",
-                  height: "10px",
+                  width: "8px",
+                  height: "8px",
                   borderRadius: "50%",
                   backgroundColor: "#ffff00",
                 }}></span>
@@ -2000,134 +2156,151 @@ const ChessBoard = () => {
         <div
           style={{
             textAlign: "center",
-            padding: "10px",
+            padding: "8px",
             backgroundColor: "rgba(0, 255, 255, 0.1)",
-            borderRadius: "5px",
+            borderRadius: "4px",
             border: "1px solid rgba(0, 255, 255, 0.2)",
           }}
         >
-          <div style={{ fontSize: "0.9rem", marginBottom: "5px" }}>
+          <div style={{ fontSize: "0.85rem", marginBottom: "3px" }}>
             Algorithm
           </div>
           <div
             style={{
-              fontSize: "1.2rem",
+              fontSize: "1.1rem",
               fontWeight: "bold",
               color: "#00ffff",
             }}
           >
             {selectedAlgorithm === "user" ? "Your Solution" : 
-            selectedAlgorithm === "warnsdorff" ? "Warnsdorff's Algorithm" 
-            : selectedAlgorithm === "backtrackingHeuristic" ? "Backtracking Heuristic" :
-            "Backtracking Algorithm"}
+            selectedAlgorithm === "warnsdorff" ? "Warnsdorff's" : 
+            selectedAlgorithm === "backtrackingHeuristic" ? "BT Heuristic" :
+            "Backtracking"}
           </div>
         </div>
         
         {/* New sections for algorithm metrics */}
         {selectedAlgorithm !== "user" && (
-          <>
+          <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
             <div
               style={{
                 textAlign: "center",
-                padding: "10px",
+                padding: "8px",
                 backgroundColor: "rgba(0, 255, 255, 0.1)",
-                borderRadius: "5px",
+                borderRadius: "4px",
                 border: "1px solid rgba(0, 255, 255, 0.2)",
               }}
             >
-              <div style={{ fontSize: "0.9rem", marginBottom: "5px" }}>
+              <div style={{ fontSize: "0.85rem", marginBottom: "3px" }}>
                 Execution Time
               </div>
               <div
                 style={{
-                  fontSize: "1.2rem",
+                  fontSize: "1.1rem",
                   fontWeight: "bold",
                   color: "#00ffff",
                 }}
               >
-                {metrics.executionTime !== null ?
-                   metrics.timedOut ? "—" :
-                  `${metrics.executionTime.toFixed(2)} ms` :
-                  "Calculating..."}
+                {metrics.executionTime.toFixed(2)} ms
               </div>
             </div>
-            
+  
             <div
               style={{
                 textAlign: "center",
-                padding: "10px",
+                padding: "8px",
                 backgroundColor: "rgba(0, 255, 255, 0.1)",
-                borderRadius: "5px",
+                borderRadius: "4px",
                 border: "1px solid rgba(0, 255, 255, 0.2)",
               }}
             >
-              <div style={{ fontSize: "0.9rem", marginBottom: "5px" }}>
-                Solution Found
+              <div style={{ fontSize: "0.85rem", marginBottom: "3px" }}>
+                Memory Usage
               </div>
               <div
                 style={{
-                  fontSize: "1.2rem",
+                  fontSize: "1.1rem",
                   fontWeight: "bold",
                   color: "#00ffff",
                 }}
-              >
-                {(metrics.solutionFound !== null 
-                  && !metrics.timedOut) ? 
-                  (metrics.solutionFound === true ? "TRUE" : "FALSE")
-                  : "Calculating..."}
+              >  
+                {metrics.memoryUsageKB.toFixed(2)} KB
               </div>
             </div>
-
+            
+            <div style={{ display: "flex", gap: "8px" }}>
+              <div
+                style={{
+                  textAlign: "center",
+                  padding: "8px",
+                  backgroundColor: "rgba(0, 255, 255, 0.1)",
+                  borderRadius: "4px",
+                  border: "1px solid rgba(0, 255, 255, 0.2)",
+                  flex: 1
+                }}
+              >
+                <div style={{ fontSize: "0.85rem", marginBottom: "3px" }}>
+                  Solution Found
+                </div>
+                <div
+                  style={{
+                    fontSize: "1.1rem",
+                    fontWeight: "bold",
+                    color: "#00ffff",
+                  }}
+                >
+                  {(metrics.solutionFound === true) ? "YES" : "NO"}
+                </div>
+              </div>
+  
+              <div
+                style={{
+                  textAlign: "center",
+                  padding: "8px",
+                  backgroundColor: "rgba(0, 255, 255, 0.1)",
+                  borderRadius: "4px",
+                  border: "1px solid rgba(0, 255, 255, 0.2)",
+                  flex: 1
+                }}
+              >
+                <div style={{ fontSize: "0.85rem", marginBottom: "3px" }}>
+                  Max Moves
+                </div>
+                <div
+                  style={{
+                    fontSize: "1.1rem",
+                    fontWeight: "bold",
+                    color: "#00ffff",
+                  }}
+                >
+                  {metrics.maximumNumberOfMoves}
+                </div>
+              </div>
+            </div>
+  
             <div
               style={{
                 textAlign: "center",
-                padding: "10px",
+                padding: "8px",
                 backgroundColor: "rgba(0, 255, 255, 0.1)",
-                borderRadius: "5px",
+                borderRadius: "4px",
                 border: "1px solid rgba(0, 255, 255, 0.2)",
               }}
             >
-              <div style={{ fontSize: "0.9rem", marginBottom: "5px" }}>
+              <div style={{ fontSize: "0.85rem", marginBottom: "3px" }}>
                 Branches Covered
               </div>
               <div
                 style={{
-                  fontSize: "1.2rem",
+                  fontSize: "1.1rem",
                   fontWeight: "bold",
                   color: "#00ffff",
                 }}
               >
-                {metrics.branchesCovered !== null 
-                  ? metrics.branchesCovered.toLocaleString() 
-                  : "Calculating..."}
+                {metrics.branchesCovered}
               </div>
             </div>
-
-            <div
-              style={{
-                textAlign: "center",
-                padding: "10px",
-                backgroundColor: "rgba(0, 255, 255, 0.1)",
-                borderRadius: "5px",
-                border: "1px solid rgba(0, 255, 255, 0.2)",
-              }}
-            >
-              <div style={{ fontSize: "0.9rem", marginBottom: "5px" }}>
-                Maximum moves
-              </div>
-              <div
-                style={{
-                  fontSize: "1.2rem",
-                  fontWeight: "bold",
-                  color: "#00ffff",
-                }}
-              >
-                {(metrics.maximumNumberOfMoves !== null)  ?
-                  metrics.maximumNumberOfMoves :
-                  "Calculating..."}
-              </div>
-            </div>
-          </>
+          </div>
         )}
       </div>
     );
@@ -2182,7 +2355,7 @@ const ChessBoard = () => {
       <div
         style={{
           position: "absolute",
-          top: "120px",
+          top: "50px",
           right: "20px",
           backgroundColor: "rgba(0, 0, 0, 0.7)",
           padding: "20px",
@@ -2270,12 +2443,31 @@ const ChessBoard = () => {
           </>
         ) : (
           <>
-            <button
-              onClick={resetGame}
+            {isDeadEnd && (
+              <button
+                onClick={resetGame}
+                style={{
+                  padding: "10px",
+                  fontSize: "16px",
+                  backgroundColor: "#f44336",
+                  color: "white",
+                  border: "1px solid rgba(255, 255, 255, 0.3)",
+                  borderRadius: "5px",
+                  cursor: "pointer",
+                  transition: "all 0.2s",
+                }}
+              >
+                Reset Game
+              </button>
+            )}
+            
+            { (gameCompleted || gameStarted ) && (
+              <button
+              onClick={restartGame}
               style={{
                 padding: "10px",
                 fontSize: "16px",
-                backgroundColor: "#f44336",
+                backgroundColor: "#4CAF50",
                 color: "white",
                 border: "1px solid rgba(255, 255, 255, 0.3)",
                 borderRadius: "5px",
@@ -2283,8 +2475,10 @@ const ChessBoard = () => {
                 transition: "all 0.2s",
               }}
             >
-              Reset Game
+              Start New Game
             </button>
+            )}
+            
 
             <button
               onClick={undoMove}
@@ -2310,7 +2504,7 @@ const ChessBoard = () => {
                 gameTime={gameTime} 
                 onClose={() => setShowVictoryModal(false)} 
                 isDefeat={isDeadEnd}
-                resetGame={resetGame}
+                restartGame={restartGame}
                 boardSize={boardSize}
                 setShowResultsTab={setShowResultsTab}
               />
@@ -2362,6 +2556,30 @@ const ChessBoard = () => {
                 {moveCount}
               </div>
             </div>
+
+            <div
+              style={{
+                textAlign: "center",
+                marginTop: "10px",
+                padding: "10px",
+                backgroundColor: "rgba(0, 255, 255, 0.1)",
+                borderRadius: "5px",
+                border: "1px solid rgba(0, 255, 255, 0.2)",
+              }}
+            >
+              <div style={{ fontSize: "0.9rem", marginBottom: "5px" }}>
+                Number of Attempts
+              </div>
+              <div
+                style={{
+                  fontSize: "1.5rem",
+                  fontWeight: "bold",
+                  color: "#00ffff",
+                }}
+              >
+                {noOfAttempts}
+              </div>
+            </div>
           </>
         )}
         {!gameStarted && (
@@ -2393,7 +2611,7 @@ const ChessBoard = () => {
           
       </div>
 
-      {gameCompleted && showResultsTab && <ResultsTab />}
+      { ((noOfAttempts > 1) || gameCompleted) && <ResultsTab />}
 
       {showMetricsChart && <AlgorithmMetricsChart />}
 
