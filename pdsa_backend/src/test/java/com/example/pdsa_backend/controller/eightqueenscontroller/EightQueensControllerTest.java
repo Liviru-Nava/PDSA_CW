@@ -1,7 +1,6 @@
 package com.example.pdsa_backend.controller.eightqueenscontroller;
 
 import com.example.pdsa_backend.controller.EightQueensController;
-import com.example.pdsa_backend.dto.*;
 import com.example.pdsa_backend.dto.eightqueens.*;
 import com.example.pdsa_backend.service.EightQueensService;
 import org.junit.jupiter.api.BeforeEach;
