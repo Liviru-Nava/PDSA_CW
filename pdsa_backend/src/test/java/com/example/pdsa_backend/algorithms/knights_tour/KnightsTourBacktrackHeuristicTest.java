@@ -51,7 +51,7 @@ public class KnightsTourBacktrackHeuristicTest {
 
     @Test
     void testTimeout() {
-        KnightsTourBacktrackHeuristic largeBoard = new KnightsTourBacktrackHeuristic(8, 8);
+        KnightsTourBacktrackHeuristic largeBoard = new KnightsTourBacktrackHeuristic(20 , 20);
         largeBoard.setTimeout(1); // 1ms timeout, should cause timeout
 
         assertThrows(TimeoutException.class, () -> largeBoard.solveKnightsTour(0, 0));
