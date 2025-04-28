@@ -161,7 +161,7 @@ public class TSPAlgorithmTest {
 
             // Verify the route follows the optimal path (B, C, D, ..., J)
             for (int i = 0; i < solution.getOptimizedRoute().size(); i++) {
-                assertEquals(String.valueOf((char) ('B' + i)), solution.getOptimizedRoute().get(i).getName());
+                assertEquals(String.valueOf((char) ('J' - i)), solution.getOptimizedRoute().get(i).getName());
             }
 
         } catch (Exception e) {

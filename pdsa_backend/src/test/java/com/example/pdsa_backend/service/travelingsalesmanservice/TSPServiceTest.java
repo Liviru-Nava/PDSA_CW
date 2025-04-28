@@ -83,6 +83,7 @@ public class TSPServiceTest {
             distances.put(i, cityDistances);
         }
         request.setDistances(distances);
+        request.setTotalDistance(100);
         return request;
     }
 
