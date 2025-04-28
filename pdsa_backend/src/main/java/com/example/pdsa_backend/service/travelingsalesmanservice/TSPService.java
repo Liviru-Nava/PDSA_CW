@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 @Service
@@ -164,12 +165,12 @@ public class TSPService {
     private int[][] createDistanceMatrix(List<TSPRequest.City> cities, Map<Integer, Map<Integer, Integer>> distances) {
 
         //initialize distance matrix
-        int n = cities.size();
-        int[][] distanceMatrix = new int[n][n];
+        int numberOfCities = cities.size();
+        int[][] distanceMatrix = new int[numberOfCities][numberOfCities];
 
         // Fill distance matrix
-        for (int i = 0; i < n; i++) {
-            for (int j = 0; j < n; j++) {
+        for (int i = 0; i < numberOfCities; i++) {
+            for (int j = 0; j < numberOfCities; j++) {
                 if (i == j) {
                     distanceMatrix[i][j] = 0;
                 } else {
@@ -195,12 +196,12 @@ public class TSPService {
             //start the time of solving the algorithm
             long startTime = System.currentTimeMillis();
 
-            int n = cities.size();
+            int numberOfCities = cities.size();
             int homeIndex = 0; // Home city is always at index 0
 
             //add the cities to visit in order except the home city
             List<Integer> toVisit = new ArrayList<>();
-            for (int i = 1; i < n; i++) {
+            for (int i = 1; i < numberOfCities; i++) {
                 toVisit.add(i);
             }
 
@@ -308,8 +309,8 @@ public class TSPService {
             //start time of the algorithm
             long startTime = System.currentTimeMillis();
 
-            int n = cities.size();
-            boolean[] visited = new boolean[n];
+            int numberOfCities = cities.size();
+            boolean[] visited = new boolean[numberOfCities];
             List<TSPRequest.City> path = new ArrayList<>();
             int totalDistance = 0;
 
@@ -317,12 +318,12 @@ public class TSPService {
             visited[current] = true;
 
             // Visit all cities
-            for (int i = 0; i < n - 1; i++) {
+            for (int i = 0; i < numberOfCities - 1; i++) {
                 int nearest = -1;
                 int minDistance = Integer.MAX_VALUE;
 
                 // Find nearest unvisited city
-                for (int j = 0; j < n; j++) {
+                for (int j = 0; j < numberOfCities; j++) {
                     if (!visited[j] && distanceMatrix[current][j] < minDistance) {
                         nearest = j;
                         minDistance = distanceMatrix[current][j];
@@ -362,78 +363,77 @@ public class TSPService {
         TSPSolution solution = new TSPSolution(); //has algorithm name, optimized route, total distance and executionTime
         solution.setAlgorithmName("Held-Karp (Dynamic Programming)");
 
-        try{
+        try {
             //get the memory before
             int memoryBefore = measureMemoryUsage();
 
             //start time of the algorithm
             long startTime = System.currentTimeMillis();
 
-            int n = cities.size();  //10
-            int homeIndex = 0;      //home is at 0
+            int numberOfCities = cities.size();
+            int homeIndex = 0;
 
             // Initialize memoization table
-            // dp[mask][last] = minimum distance of path covering all cities in mask and ending at city 'last'
-            Map<Integer, Map<Integer, Integer>> dp = new HashMap<>();
-            // parent[mask][last] = city visited before 'last' in optimal path represented by mask
-            Map<Integer, Map<Integer, Integer>> parent = new HashMap<>();
+            // dp[subset][last] = minimum distance of path covering all cities in subset and ending at city 'last'
+            Map<Set<Integer>, Map<Integer, Integer>> dp = new HashMap<>();
+            // parent[subset][last] = city visited before 'last' in optimal path represented by subset
+            Map<Set<Integer>, Map<Integer, Integer>> parent = new HashMap<>();
 
-            // Base case: starting at city 0 (home)
-            for (int i = 1; i < n; i++) {
-                int mask = 1 << i; //mask with only city i (when i = 1, mask = 2,
-                Map<Integer, Integer> innerMap = dp.getOrDefault(mask, new HashMap<>());
+            // Base case: paths from home to each city
+            for (int i = 1; i < numberOfCities; i++) {
+                Set<Integer> subset = new HashSet<>();
+                subset.add(i);
+
+                Map<Integer, Integer> innerMap = new HashMap<>();
                 innerMap.put(i, distanceMatrix[homeIndex][i]);
-                dp.put(mask, innerMap);
+                dp.put(subset, innerMap);
 
-                Map<Integer, Integer> innerParent = parent.getOrDefault(mask, new HashMap<>());
+                Map<Integer, Integer> innerParent = new HashMap<>();
                 innerParent.put(i, homeIndex);
-                parent.put(mask, innerParent);
+                parent.put(subset, innerParent);
             }
 
-            // Iterate over all possible subsets of cities (excluding home)
-            int allVisited = (1 << n) - 2; //1024- 2 = 1022 meaning B-J cities are visited except home
+            // Generate all subsets of size 2 to n-1 (excluding home)
+            List<Integer> allCities = new ArrayList<>();
+            for (int i = 1; i < numberOfCities; i++) {
+                allCities.add(i);
+            }
 
-            for (int mask = 3; mask <= allVisited; mask++) {
-                // Check if mask is a valid subset (has the right number of bits)
-                if (Integer.bitCount(mask) <= 1) continue;  //initial loop mask is 3 -> 1's in 3 is 2
+            // Process subsets by increasing size
+            for (int size = 2; size < numberOfCities; size++) {
+                generateSubsets(allCities, size, 0, new ArrayList<>(), (subset) -> {
+                    for (int last : subset) {
+                        // For each city 'last' in the subset, find best path ending at 'last'
+                        int minDist = Integer.MAX_VALUE;
+                        int minPrev = -1;
 
-                for (int last = 1; last < n; last++) {
-                    // Check if city 'last' is in current subset
-                    if ((mask & (1 << last)) == 0) continue;
+                        // Create subset without 'last'
+                        Set<Integer> prevSubset = new HashSet<>(subset);
+                        prevSubset.remove(last);
 
-                    // Previous mask without city 'last'
-                    int prevMask = mask & ~(1 << last);
-                    int minDist = Integer.MAX_VALUE;
-                    int minPrev = -1;
-
-                    // Try all possible cities before 'last'
-                    for (int prev = 1; prev < n; prev++) {
-                        if ((prevMask & (1 << prev)) == 0) continue;
-
-                        int distance = dp.get(prevMask).get(prev) + distanceMatrix[prev][last];
-                        if (distance < minDist) {
-                            minDist = distance;
-                            minPrev = prev;
+                        // Try all possible cities before 'last'
+                        for (int prev : prevSubset) {
+                            int distance = dp.get(prevSubset).get(prev) + distanceMatrix[prev][last];
+                            if (distance < minDist) {
+                                minDist = distance;
+                                minPrev = prev;
+                            }
                         }
+
+                        // Update dp table
+                        dp.computeIfAbsent(new HashSet<>(subset), k -> new HashMap<>()).put(last, minDist);
+                        // Update parent pointers
+                        parent.computeIfAbsent(new HashSet<>(subset), k -> new HashMap<>()).put(last, minPrev);
                     }
-
-                    // Update dp table
-                    Map<Integer, Integer> innerMap = dp.getOrDefault(mask, new HashMap<>());
-                    innerMap.put(last, minDist);
-                    dp.put(mask, innerMap);
-
-                    // Update parent pointers
-                    Map<Integer, Integer> innerParent = parent.getOrDefault(mask, new HashMap<>());
-                    innerParent.put(last, minPrev);
-                    parent.put(mask, innerParent);
-                }
+                });
             }
 
-            // Find optimal last city
+            // Complete the tour by returning to home
+            Set<Integer> allVisited = new HashSet<>(allCities);
             int minTotalDist = Integer.MAX_VALUE;
             int lastCity = -1;
 
-            for (int i = 1; i < n; i++) {
+            for (int i = 1; i < numberOfCities; i++) {
                 int distance = dp.get(allVisited).get(i) + distanceMatrix[i][homeIndex];
                 if (distance < minTotalDist) {
                     minTotalDist = distance;
@@ -443,18 +443,15 @@ public class TSPService {
 
             // Reconstruct path
             List<TSPRequest.City> path = new ArrayList<>();
-            int mask = allVisited;
+            Set<Integer> currentSubset = new HashSet<>(allVisited);
             int current = lastCity;
 
             while (current != homeIndex) {
-                path.add(0, cities.get(current)); // Add to front of list
-                int next = parent.get(mask).get(current);
-                mask = mask & ~(1 << current);
-                current = next;
+                path.add(cities.get(current));
+                int prev = parent.get(currentSubset).get(current);
+                currentSubset.remove(current);
+                current = prev;
             }
-
-            //reverse the list for proper path generation
-            Collections.reverse(path);
 
             // Get memory after execution
             int memoryAfter = measureMemoryUsage();
@@ -466,10 +463,24 @@ public class TSPService {
             solution.setTotalDistance(minTotalDist);
             solution.setExecutionTimeMs(System.currentTimeMillis() - startTime);
             solution.setMemoryUsageKb(memoryUsed);
-        }catch(Exception ex){
-            throw new RuntimeException("Nearest Neighbor algorithm failed: " + ex.getMessage(), ex);
+        } catch (Exception ex) {
+            throw new RuntimeException("Held-Karp algorithm failed: " + ex.getMessage(), ex);
         }
         return solution;
+    }
+
+    // Helper method to generate all subsets of a specific size
+    private void generateSubsets(List<Integer> elements, int size, int startIndex, List<Integer> current, Consumer<Set<Integer>> processor) {
+        if (current.size() == size) {
+            processor.accept(new HashSet<>(current));
+            return;
+        }
+
+        for (int i = startIndex; i < elements.size(); i++) {
+            current.add(elements.get(i));
+            generateSubsets(elements, size, i + 1, current, processor);
+            current.remove(current.size() - 1);
+        }
     }
 
     //----------------------------------END SOLVE THE ALGORITHMS------------------------------------------//
