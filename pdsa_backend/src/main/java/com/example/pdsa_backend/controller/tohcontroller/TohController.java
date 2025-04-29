@@ -3,9 +3,12 @@ package com.example.pdsa_backend.controller.tohcontroller;
 import com.example.pdsa_backend.dto.towerofhanoidto.*;
 import com.example.pdsa_backend.service.tohservice.TowerOfHanoiService;
 //import jakarta.validation.Valid;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+
 
 @RestController
 @RequestMapping("/tower-of-hanoi")
@@ -20,7 +23,7 @@ public class TohController {
     }
 
     @PostMapping("/submit")
-    public ResponseEntity<TowerOfHanoiResponse> submitSolution( @RequestBody TowerOfHanoiRequest request) {
+    public ResponseEntity<TowerOfHanoiResponse> submitSolution(@Valid @RequestBody TowerOfHanoiRequest request) {
         TowerOfHanoiResponse response = towerOfHanoiService.submitSolution(request);
         return ResponseEntity.ok(response);
     }
@@ -35,15 +38,15 @@ public class TohController {
         return ResponseEntity.ok(response);
     }
 
-//    @PostMapping("/auto-solve")
-//    public ResponseEntity<AutoSolveResponse> getAutoSolveSequence(@Valid @RequestBody AutoSolveRequest request) {
-//        AutoSolveResponse response = towerOfHanoiService.getAutoSolveSequence(request);
-//        return ResponseEntity.ok(response);
-//    }
-
     @PostMapping("/auto-solve")
-    public ResponseEntity<AutoSolveResponse> getAutoSolveSequence( @RequestBody AutoSolveRequest request) {
+    public ResponseEntity<AutoSolveResponse> getAutoSolveSequence(@Valid @RequestBody AutoSolveRequest request) {
         AutoSolveResponse response = towerOfHanoiService.getAutoSolveSequence(request);
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/algorithm-results")
+    public ResponseEntity<AlgorithmResultsResponse> getAlgorithmResults(@Valid @RequestBody AutoSolveRequest request) {
+        AlgorithmResultsResponse response = towerOfHanoiService.getAlgorithmResults(request);
         return ResponseEntity.ok(response);
     }
 

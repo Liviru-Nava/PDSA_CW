@@ -90,7 +90,7 @@ class TowerOfHanoiServiceTest {
 
         // Assert
         assertTrue(response.isValid());
-        assertEquals("Solution submitted successfully!", response.getMessage());
+        assertEquals("Solution submitted successfully! You won! Check algorithm results for optimal solutions.", response.getMessage());
         verify(towerOfHanoiResultRepository, times(1)).save(any(TowerOfHanoiResult.class));
         verify(performanceMetricRepository, times(2)).save(any(PerformanceMetric.class));
     }
@@ -306,6 +306,68 @@ class TowerOfHanoiServiceTest {
 
         // Act
         AutoSolveResponse response = towerOfHanoiService.getAutoSolveSequence(request);
+
+        // Assert
+        assertFalse(response.isValid());
+        assertEquals("Peg count must be 3 or 4.", response.getMessage());
+    }
+
+    @Test
+    void getAlgorithmResults_Valid3Peg_Success() {
+        AutoSolveRequest request = new AutoSolveRequest();
+        request.setDiskCount(5);
+        request.setPegCount(3);
+        AlgorithmResultsResponse response = towerOfHanoiService.getAlgorithmResults(request);
+        assertTrue(response.isValid());
+        assertEquals("Algorithm results generated successfully!", response.getMessage());
+        assertNotNull(response.getAlgorithmResults());
+        assertTrue(response.getAlgorithmResults().containsKey("3-Peg Recursive"));
+        assertTrue(response.getAlgorithmResults().containsKey("3-Peg Iterative"));
+        assertEquals(31, response.getAlgorithmResults().get("3-Peg Recursive").getNumOfMoves());
+        assertEquals(31, response.getAlgorithmResults().get("3-Peg Iterative").getNumOfMoves());
+    }
+
+    @Test
+    void getAlgorithmResults_Valid4Peg_Success() {
+        // Arrange
+        AutoSolveRequest request = new AutoSolveRequest();
+        request.setDiskCount(5);
+        request.setPegCount(4);
+
+        // Act
+        AlgorithmResultsResponse response = towerOfHanoiService.getAlgorithmResults(request);
+
+        // Assert
+        assertTrue(response.isValid());
+        assertEquals("Algorithm results generated successfully!", response.getMessage());
+        assertNotNull(response.getAlgorithmResults());
+        assertTrue(response.getAlgorithmResults().containsKey("4-Peg Frame-Stewart"));
+    }
+
+    @Test
+    void getAlgorithmResults_InvalidDiskCount_Failure() {
+        // Arrange
+        AutoSolveRequest request = new AutoSolveRequest();
+        request.setDiskCount(3);
+        request.setPegCount(3);
+
+        // Act
+        AlgorithmResultsResponse response = towerOfHanoiService.getAlgorithmResults(request);
+
+        // Assert
+        assertFalse(response.isValid());
+        assertEquals("Disk count must be between 5 and 10.", response.getMessage());
+    }
+
+    @Test
+    void getAlgorithmResults_InvalidPegCount_Failure() {
+        // Arrange
+        AutoSolveRequest request = new AutoSolveRequest();
+        request.setDiskCount(5);
+        request.setPegCount(5);
+
+        // Act
+        AlgorithmResultsResponse response = towerOfHanoiService.getAlgorithmResults(request);
 
         // Assert
         assertFalse(response.isValid());

@@ -12,7 +12,7 @@ import {
   Tooltip,
   Legend,
 } from 'chart.js';
-import { ToastContainer, toast } from 'react-toastify';
+import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import './TowerOfHanoi.css';
 
@@ -23,6 +23,8 @@ const TowerOfHanoi = () => {
   const [username, setUsername] = useState('');
   const [pegCount, setPegCount] = useState(3);
   const [diskCount, setDiskCount] = useState(5);
+  const [diskSelectionMode, setDiskSelectionMode] = useState('Random');
+  const [manualDiskCount, setManualDiskCount] = useState('');
   const [numOfMoves, setNumOfMoves] = useState('');
   const [moveSequence, setMoveSequence] = useState('');
   const [poles, setPoles] = useState([[], [], [], []]);
@@ -36,14 +38,15 @@ const TowerOfHanoi = () => {
   const [rounds, setRounds] = useState('');
   const [metrics, setMetrics] = useState(null);
   const [showTutorial, setShowTutorial] = useState(true);
-  const [popupMessage, setPopupMessage] = useState(null); // New state for side popup
+  const [popupMessage, setPopupMessage] = useState(null);
+  const [winPopup, setWinPopup] = useState(null);
   const intervalRef = useRef(null);
   const starsContainerRef = useRef(null);
 
-  // Peg labels (reversed: A is source, C/D is destination)
+  // Peg labels (A is source, C/D is destination)
   const pegLabels = pegCount === 3 ? ['C', 'B', 'A'] : ['D', 'C', 'B', 'A'];
 
-  // Starry background with enhanced parallax
+  // Starry background with parallax
   useEffect(() => {
     const container = starsContainerRef.current;
     if (!container) return;
@@ -98,11 +101,19 @@ const TowerOfHanoi = () => {
     return () => window.removeEventListener('mousemove', handleMouseMove);
   }, []);
 
-  // Initialize game
+  // Initialize game based on disk selection mode
   useEffect(() => {
+    let newDiskCount = diskCount;
+    if (diskSelectionMode === 'Random') {
+      newDiskCount = Math.floor(Math.random() * 6) + 5; // Random between 5 and 10
+      setDiskCount(newDiskCount);
+    } else if (manualDiskCount && parseInt(manualDiskCount) >= 5 && parseInt(manualDiskCount) <= 10) {
+      newDiskCount = parseInt(manualDiskCount);
+      setDiskCount(newDiskCount);
+    }
     const newPoles = Array(4).fill().map(() => []);
-    for (let i = diskCount; i >= 1; i--) {
-      newPoles[pegCount - 1].push(i);
+    for (let i = newDiskCount; i >= 1; i--) {
+      newPoles[pegCount - 1].push(i); // Source peg (A)
     }
     setPoles(newPoles);
     setHeldDisk(null);
@@ -114,11 +125,36 @@ const TowerOfHanoi = () => {
     setErrorMessage('');
     setSuccessMessage('');
     setPopupMessage(null);
-  }, [diskCount, pegCount]);
+    setWinPopup(null);
+  }, [diskCount, pegCount, diskSelectionMode, manualDiskCount]);
+
+  // Fetch algorithm results on win
+  const fetchAlgorithmResults = async () => {
+    try {
+      const response = await axios.post('http://localhost:8081/pdsa/tower-of-hanoi/algorithm-results', {
+        diskCount,
+        pegCount,
+      });
+      if (response.data.valid) {
+        setWinPopup({
+          message: 'You won! Here are the optimal solutions:',
+          algorithmResults: response.data.algorithmResults,
+        });
+      } else {
+        setPopupMessage({ type: 'error', message: response.data.message });
+        setTimeout(() => setPopupMessage(null), 3000);
+      }
+    } catch (error) {
+      console.error('Algorithm results error:', error);
+      setPopupMessage({ type: 'error', message: 'Failed to fetch algorithm results.' });
+      setTimeout(() => setPopupMessage(null), 3000);
+    }
+  };
 
   const checkWinCondition = (updatedPoles) => {
-    if (updatedPoles[0].length === diskCount) {
+    if (updatedPoles[0].length === diskCount) { // Destination peg (C or D)
       setIsWin(true);
+      fetchAlgorithmResults();
       if (starsContainerRef.current) {
         for (let i = 0; i < 30; i++) {
           setTimeout(() => {
@@ -176,12 +212,11 @@ const TowerOfHanoi = () => {
         setTimeout(() => {
           poleElement.classList.remove('animate-shake', 'bg-red-600');
         }, 400);
-        // Show side popup instead of toast
         setPopupMessage({
           type: 'error',
           message: 'Cannot place a larger disk on a smaller one!',
         });
-        setTimeout(() => setPopupMessage(null), 3000); // Auto-dismiss after 3 seconds
+        setTimeout(() => setPopupMessage(null), 3000);
       }
     }
   };
@@ -205,6 +240,7 @@ const TowerOfHanoi = () => {
     setErrorMessage('');
     setSuccessMessage('');
     setPopupMessage(null);
+    setWinPopup(null);
   };
 
   const handleAutoSolve = async () => {
@@ -239,6 +275,7 @@ const TowerOfHanoi = () => {
             clearInterval(intervalRef.current);
             intervalRef.current = null;
             checkWinCondition(newPoles);
+            fetchAlgorithmResults();
             return;
           }
           const move = moves[stepIndex];
@@ -311,6 +348,10 @@ const TowerOfHanoi = () => {
       if (response.data.valid) {
         setPopupMessage({ type: 'success', message: response.data.message });
         setErrorMessage('');
+        setWinPopup({
+          message: 'You won! Here are the optimal solutions:',
+          algorithmResults: response.data.algorithmResults,
+        });
       } else {
         setPopupMessage({ type: 'error', message: response.data.message });
         setSuccessMessage('');
@@ -337,6 +378,14 @@ const TowerOfHanoi = () => {
       console.error('Fetch metrics error:', error);
       setPopupMessage({ type: 'error', message: 'Failed to fetch performance metrics.' });
       setTimeout(() => setPopupMessage(null), 3000);
+    }
+  };
+
+  const handleManualDiskCountChange = (e) => {
+    const value = e.target.value;
+    if (value === '' || (parseInt(value) >= 5 && parseInt(value) <= 10)) {
+      setManualDiskCount(value);
+      if (value) setDiskCount(parseInt(value));
     }
   };
 
@@ -448,7 +497,7 @@ const TowerOfHanoi = () => {
               <li>Click a peg to pick up or place a disk.</li>
               <li>Only one disk can be moved at a time.</li>
               <li>A larger disk cannot be placed on a smaller disk.</li>
-              <li>Adjust pegs, disks, and speed in the controls.</li>
+              <li>Choose Random or Manual disk selection and adjust pegs/speed.</li>
             </ul>
             <button
               onClick={() => setShowTutorial(false)}
@@ -462,13 +511,36 @@ const TowerOfHanoi = () => {
       <div className="max-w-6xl mx-auto p-6 relative">
         <h1 className="text-6xl font-bold text-center mb-10 text-white font-orbitron drop-shadow-lg">Tower of Hanoi</h1>
 
-        {/* Side Popup for Invalid Moves and Submission */}
+        {/* Side Popup for Errors/Success */}
         {popupMessage && (
           <div className={`fixed top-1/4 right-6 w-80 p-6 rounded-xl shadow-2xl animate-slide-in text-white z-50
             ${popupMessage.type === 'error' ? 'bg-red-600 border-red-400' : 'bg-green-600 border-green-400'}`}>
             <div className="flex items-center">
               <span className="text-2xl mr-3">{popupMessage.type === 'error' ? '❌' : '✅'}</span>
               <p className="text-lg font-montserrat">{popupMessage.message}</p>
+            </div>
+          </div>
+        )}
+
+        {/* Win Popup */}
+        {winPopup && (
+          <div className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50 animate-fade-in">
+            <div className="bg-gray-900 p-8 rounded-xl max-w-2xl text-white shadow-2xl border border-cyan-500 animate-bounce-in">
+              <h2 className="text-3xl font-bold mb-6 font-orbitron text-cyan-400">{winPopup.message}</h2>
+              {Object.entries(winPopup.algorithmResults).map(([algo, result]) => (
+                <div key={algo} className="mb-4">
+                  <h3 className="text-xl font-bold">{algo}</h3>
+                  <p>Minimum Moves: {result.numOfMoves}</p>
+                  <p>Execution Time: {result.executionTimeMs} ms</p>
+                  <p className="text-sm break-words">Sequence: {result.sequenceOfMoves}</p>
+                </div>
+              ))}
+              <button
+                onClick={() => setWinPopup(null)}
+                className="p-3 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700 transition-transform transform hover:scale-105 shadow-lg"
+              >
+                Close
+              </button>
             </div>
           </div>
         )}
@@ -487,18 +559,37 @@ const TowerOfHanoi = () => {
             </select>
           </div>
           <div className="flex flex-col">
-            <label className="text-white font-bold mb-2 text-lg">Disks:</label>
+            <label className="text-white font-bold mb-2 text-lg">Disk Selection:</label>
             <select
-              value={diskCount}
-              onChange={(e) => setDiskCount(parseInt(e.target.value))}
+              value={diskSelectionMode}
+              onChange={(e) => setDiskSelectionMode(e.target.value)}
               className="p-3 rounded-lg bg-gray-900 text-white border border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-400 transition-all duration-300"
-              aria-label="Select number of disks"
+              aria-label="Select disk selection mode"
             >
-              {[5, 6, 7, 8, 9, 10].map((num) => (
-                <option key={num} value={num}>{num}</option>
-              ))}
+              <option value="Random">Random</option>
+              <option value="Manual">Manual</option>
             </select>
           </div>
+          {diskSelectionMode === 'Manual' && (
+            <div className="flex flex-col">
+              <label className="text-white font-bold mb-2 text-lg">Disk Count (5-10):</label>
+              <input
+                type="number"
+                min="5"
+                max="10"
+                value={manualDiskCount}
+                onChange={handleManualDiskCountChange}
+                placeholder="Enter disk count"
+                className={`p-3 rounded-lg bg-gray-900 text-white border-2 
+                  ${manualDiskCount >= 5 && manualDiskCount <= 10 ? 'border-green-500' : 'border-red-500'} 
+                  focus:outline-none focus:ring-2 focus:ring-cyan-400 transition-all duration-300`}
+                aria-label="Enter disk count"
+              />
+              {(manualDiskCount < 5 || manualDiskCount > 10) && (
+                <p className="text-red-400 text-sm mt-2">Enter a number between 5 and 10</p>
+              )}
+            </div>
+          )}
           <div className="flex flex-col">
             <label className="text-white font-bold mb-2 text-lg">Speed:</label>
             <input

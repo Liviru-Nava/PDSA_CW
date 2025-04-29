@@ -5,6 +5,8 @@ import com.example.pdsa_backend.data.towerofhanoidata.TowerOfHanoiResult;
 import com.example.pdsa_backend.data.towerofhanoidata.TowerOfHanoiResultRepository;
 import com.example.pdsa_backend.dto.towerofhanoidto.*;
 import jakarta.transaction.Transactional;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -15,6 +17,8 @@ import java.util.regex.Pattern;
 
 @Service
 public class TowerOfHanoiService {
+
+    private static final Logger logger = LoggerFactory.getLogger(TowerOfHanoiService.class);
 
     @Autowired
     private PlayerRepository playerRepository;
@@ -142,7 +146,8 @@ public class TowerOfHanoiService {
         tohResult.setSequenceOfMoves(request.getSequenceOfMoves());
         towerOfHanoiResultRepository.save(tohResult);
 
-        // Measure algorithm performance
+        // Measure algorithm performance and include results
+        Map<String, AlgorithmResultsResponse.AlgorithmResult> algorithmResults = new HashMap<>();
         if (request.getPegCount() == 3) {
             long recursive3PegTime = measureRecursive3Peg(request.getDiskCount());
             long iterative3PegTime = measureIterative3Peg(request.getDiskCount());
@@ -150,14 +155,38 @@ public class TowerOfHanoiService {
             savePerformanceMetrics(gameResult, game, "3-Peg Iterative", iterative3PegTime);
             response.setRecursive3PegTimeMs(recursive3PegTime);
             response.setIterative3PegTimeMs(iterative3PegTime);
+
+            List<String> recursiveMoves = new ArrayList<>();
+            solve3PegRecursive(request.getDiskCount(), 0, 2, 1, recursiveMoves, "ABC");
+            AlgorithmResultsResponse.AlgorithmResult recursiveResult = new AlgorithmResultsResponse.AlgorithmResult();
+            recursiveResult.setNumOfMoves(recursiveMoves.size());
+            recursiveResult.setSequenceOfMoves(String.join(",", recursiveMoves));
+            recursiveResult.setExecutionTimeMs(recursive3PegTime);
+            algorithmResults.put("3-Peg Recursive", recursiveResult);
+
+            List<String> iterativeMoves = solve3PegIterative(request.getDiskCount());
+            AlgorithmResultsResponse.AlgorithmResult iterativeResult = new AlgorithmResultsResponse.AlgorithmResult();
+            iterativeResult.setNumOfMoves(iterativeMoves.size());
+            iterativeResult.setSequenceOfMoves(String.join(",", iterativeMoves));
+            iterativeResult.setExecutionTimeMs(iterative3PegTime);
+            algorithmResults.put("3-Peg Iterative", iterativeResult);
         } else {
             long frameStewartTime = measureFrameStewart(request.getDiskCount());
             savePerformanceMetrics(gameResult, game, "4-Peg Frame-Stewart", frameStewartTime);
             response.setFrameStewartTimeMs(frameStewartTime);
+
+            List<String> frameStewartMoves = new ArrayList<>();
+            solve4PegFrameStewart(request.getDiskCount(), 0, 3, 1, 2, frameStewartMoves);
+            AlgorithmResultsResponse.AlgorithmResult frameStewartResult = new AlgorithmResultsResponse.AlgorithmResult();
+            frameStewartResult.setNumOfMoves(frameStewartMoves.size());
+            frameStewartResult.setSequenceOfMoves(String.join(",", frameStewartMoves));
+            frameStewartResult.setExecutionTimeMs(frameStewartTime);
+            algorithmResults.put("4-Peg Frame-Stewart", frameStewartResult);
         }
+        response.setAlgorithmResults(algorithmResults);
 
         response.setValid(true);
-        response.setMessage("Solution submitted successfully!");
+        response.setMessage("Solution submitted successfully! You won! Check algorithm results for optimal solutions.");
         return response;
     }
 
@@ -176,16 +205,88 @@ public class TowerOfHanoiService {
         }
 
         List<String> moves = new ArrayList<>();
+        long executionTime;
+        try {
+            if (request.getPegCount() == 3) {
+                executionTime = measureRecursive3Peg(request.getDiskCount());
+                solve3PegRecursive(request.getDiskCount(), 0, 2, 1, moves, "ABC");
+            } else {
+                executionTime = measureFrameStewart(request.getDiskCount());
+                solve4PegFrameStewart(request.getDiskCount(), 0, 3, 1, 2, moves);
+            }
+
+            // Validate move sequence
+            String validationError = validateMoveSequence(request.getDiskCount(), moves.toArray(new String[0]), request.getPegCount());
+            if (validationError != null) {
+                logger.error("Invalid move sequence generated: {}", validationError);
+                response.setValid(false);
+                response.setMessage("Generated move sequence is invalid: " + validationError);
+                return response;
+            }
+
+            response.setValid(true);
+            response.setNumOfMoves(moves.size());
+            response.setSequenceOfMoves(String.join(",", moves));
+            response.setMessage("Auto-solve sequence generated successfully!");
+            response.setExecutionTimeMs(executionTime);
+        } catch (Exception e) {
+            logger.error("Error generating auto-solve sequence for diskCount={}, pegCount={}: {}",
+                    request.getDiskCount(), request.getPegCount(), e.getMessage(), e);
+            response.setValid(false);
+            response.setMessage("Failed to generate auto-solve sequence: " + e.getMessage());
+        }
+        return response;
+    }
+
+    public AlgorithmResultsResponse getAlgorithmResults(AutoSolveRequest request) {
+        AlgorithmResultsResponse response = new AlgorithmResultsResponse();
+
+        if (request.getDiskCount() < 5 || request.getDiskCount() > 10) {
+            response.setValid(false);
+            response.setMessage("Disk count must be between 5 and 10.");
+            return response;
+        }
+        if (request.getPegCount() != 3 && request.getPegCount() != 4) {
+            response.setValid(false);
+            response.setMessage("Peg count must be 3 or 4.");
+            return response;
+        }
+
+        Map<String, AlgorithmResultsResponse.AlgorithmResult> algorithmResults = new HashMap<>();
         if (request.getPegCount() == 3) {
-            solve3PegRecursive(request.getDiskCount(), 0, 2, 1, moves);
+            // Recursive
+            List<String> recursiveMoves = new ArrayList<>();
+            long recursiveTime = measureRecursive3Peg(request.getDiskCount());
+            solve3PegRecursive(request.getDiskCount(), 0, 2, 1, recursiveMoves, "ABC");
+            AlgorithmResultsResponse.AlgorithmResult recursiveResult = new AlgorithmResultsResponse.AlgorithmResult();
+            recursiveResult.setNumOfMoves(recursiveMoves.size());
+            recursiveResult.setSequenceOfMoves(String.join(",", recursiveMoves));
+            recursiveResult.setExecutionTimeMs(recursiveTime);
+            algorithmResults.put("3-Peg Recursive", recursiveResult);
+
+            // Iterative
+            List<String> iterativeMoves = solve3PegIterative(request.getDiskCount());
+            long iterativeTime = measureIterative3Peg(request.getDiskCount());
+            AlgorithmResultsResponse.AlgorithmResult iterativeResult = new AlgorithmResultsResponse.AlgorithmResult();
+            iterativeResult.setNumOfMoves(iterativeMoves.size());
+            iterativeResult.setSequenceOfMoves(String.join(",", iterativeMoves));
+            iterativeResult.setExecutionTimeMs(iterativeTime);
+            algorithmResults.put("3-Peg Iterative", iterativeResult);
         } else {
-            solve4PegFrameStewart(request.getDiskCount(), 0, 3, 1, 2, moves);
+            // Frame-Stewart
+            List<String> frameStewartMoves = new ArrayList<>();
+            long frameStewartTime = measureFrameStewart(request.getDiskCount());
+            solve4PegFrameStewart(request.getDiskCount(), 0, 3, 1, 2, frameStewartMoves);
+            AlgorithmResultsResponse.AlgorithmResult frameStewartResult = new AlgorithmResultsResponse.AlgorithmResult();
+            frameStewartResult.setNumOfMoves(frameStewartMoves.size());
+            frameStewartResult.setSequenceOfMoves(String.join(",", frameStewartMoves));
+            frameStewartResult.setExecutionTimeMs(frameStewartTime);
+            algorithmResults.put("4-Peg Frame-Stewart", frameStewartResult);
         }
 
         response.setValid(true);
-        response.setNumOfMoves(moves.size());
-        response.setSequenceOfMoves(String.join(",", moves));
-        response.setMessage("Auto-solve sequence generated successfully!");
+        response.setMessage("Algorithm results generated successfully!");
+        response.setAlgorithmResults(algorithmResults);
         return response;
     }
 
@@ -222,7 +323,7 @@ public class TowerOfHanoiService {
 
     @Transactional
     public void populateTestMetrics() {
-        System.out.println("Starting populateTestMetrics");
+        logger.info("Starting populateTestMetrics");
         String[] usernames = {"user1", "user2", "user3", "user4", "user5"};
         int[] diskCounts = {5, 6, 7, 8};
         int[] pegCounts = {3, 4};
@@ -231,7 +332,7 @@ public class TowerOfHanoiService {
         for (String username : usernames) {
             for (int diskCount : diskCounts) {
                 for (int pegCount : pegCounts) {
-                    System.out.println("Iteration " + ++iterationCount + ": username=" + username + ", disks=" + diskCount + ", pegs=" + pegCount);
+                    logger.info("Iteration {}: username={}, disks={}, pegs={}", ++iterationCount, username, diskCount, pegCount);
                     TowerOfHanoiRequest request = new TowerOfHanoiRequest();
                     request.setUsername(username);
                     request.setDiskCount(diskCount);
@@ -240,22 +341,28 @@ public class TowerOfHanoiService {
                     autoSolveRequest.setDiskCount(diskCount);
                     autoSolveRequest.setPegCount(pegCount);
                     AutoSolveResponse autoSolveResponse = getAutoSolveSequence(autoSolveRequest);
-                    System.out.println("AutoSolveResponse: valid=" + autoSolveResponse.isValid() + ", moves=" + autoSolveResponse.getNumOfMoves() + ", sequence=" + autoSolveResponse.getSequenceOfMoves());
+                    logger.info("AutoSolveResponse: valid={}, moves={}, sequence={}",
+                            autoSolveResponse.isValid(), autoSolveResponse.getNumOfMoves(), autoSolveResponse.getSequenceOfMoves());
                     if (autoSolveResponse.isValid()) {
                         request.setSequenceOfMoves(autoSolveResponse.getSequenceOfMoves());
                         request.setNumOfMoves(autoSolveResponse.getNumOfMoves());
                         TowerOfHanoiResponse response = submitSolution(request);
-                        System.out.println("SubmitSolution Response: valid=" + response.isValid() + ", message=" + response.getMessage());
+                        logger.info("SubmitSolution Response: valid={}, message={}", response.isValid(), response.getMessage());
                     } else {
-                        System.out.println("Skipping invalid auto-solve response");
+                        logger.warn("Skipping invalid auto-solve response");
                     }
                 }
             }
         }
-        System.out.println("Completed populateTestMetrics with " + iterationCount + " iterations");
+        logger.info("Completed populateTestMetrics with {} iterations", iterationCount);
     }
 
     private String validateMoveSequence(int diskCount, String[] moves, int pegCount) {
+        // Enforce minimum moves for 3-peg
+        if (pegCount == 3 && moves.length < (1 << diskCount) - 1) {
+            return "Invalid move sequence: Too few moves (" + moves.length + ") for " + diskCount + " disks. Minimum is " + ((1 << diskCount) - 1) + ".";
+        }
+
         List<List<Integer>> poles = new ArrayList<>();
         for (int i = 0; i < pegCount; i++) {
             poles.add(new ArrayList<>());
@@ -302,76 +409,142 @@ public class TowerOfHanoiService {
         for (int i = 0; i < iterations; i++) {
             long startTime = System.nanoTime();
             List<String> moves = new ArrayList<>();
-            solve3PegRecursive(diskCount, 0, 2, 1, moves);
+            solve3PegRecursive(diskCount, 0, 2, 1, moves, "ABC");
             long endTime = System.nanoTime();
             totalTime += (endTime - startTime);
         }
         return totalTime / (iterations * 1_000);
     }
 
-    private void solve3PegRecursive(int n, int from, int to, int aux, List<String> moves) {
+    private void solve3PegRecursive(int n, int from, int to, int aux, List<String> moves, String pegLabels) {
         if (n == 0) return;
-        solve3PegRecursive(n - 1, from, aux, to, moves);
-        moves.add("ABCD".charAt(from) + "->" + "ABCD".charAt(to));
-        solve3PegRecursive(n - 1, aux, to, from, moves);
+        if (from < 0 || from >= pegLabels.length() || to < 0 || to >= pegLabels.length() || aux < 0 || aux >= pegLabels.length()) {
+            throw new IllegalArgumentException("Invalid peg index: from=" + from + ", to=" + to + ", aux=" + aux + ", pegLabels=" + pegLabels);
+        }
+        solve3PegRecursive(n - 1, from, aux, to, moves, pegLabels);
+        String move = pegLabels.charAt(from) + "->" + pegLabels.charAt(to);
+        moves.add(move);
+        logger.debug("3-Peg move: {}", move);
+        solve3PegRecursive(n - 1, aux, to, from, moves, pegLabels);
     }
 
+    //    private long measureIterative3Peg(int diskCount) {
+//        long totalTime = 0;
+//        int iterations = 1000;
+//        for (int i = 0; i < iterations; i++) {
+//            long startTime = System.nanoTime();
+//            List<String> moves = solve3PegIterative(diskCount);
+//            long endTime = System.nanoTime();
+//            totalTime += (endTime - startTime);
+//        }
+//        return totalTime / (iterations * 1_000);
+//    }
     private long measureIterative3Peg(int diskCount) {
         long totalTime = 0;
         int iterations = 1000;
         for (int i = 0; i < iterations; i++) {
             long startTime = System.nanoTime();
-            List<String> moves = solve3PegIterative(diskCount);
+            List<String> moves = solve3PegIterative(diskCount); // Uses optimized version
             long endTime = System.nanoTime();
             totalTime += (endTime - startTime);
         }
         return totalTime / (iterations * 1_000);
     }
+//    private List<String> solve3PegIterative(int diskCount) {
+//        List<String> moves = new ArrayList<>();
+//        int totalMoves = (1 << diskCount) - 1; // 2^n - 1
+//        List<List<Integer>> poles = new ArrayList<>();
+//        for (int i = 0; i < 3; i++) {
+//            poles.add(new ArrayList<>());
+//        }
+//        for (int i = diskCount; i >= 1; i--) {
+//            poles.get(0).add(i); // Initialize source peg A with disks
+//        }
+//
+//        // For odd disk count, smallest disk moves A->C->B->A (counterclockwise).
+//        // For even disk count, smallest disk moves A->B->C->A (clockwise).
+//        boolean isOdd = diskCount % 2 == 1;
+//        for (int i = 1; i <= totalMoves; i++) {
+//            if (i % 2 == 1) {
+//                // Move smallest disk (disk 1)
+//                int from = -1, to = -1;
+//                for (int j = 0; j < 3; j++) {
+//                    if (!poles.get(j).isEmpty() && poles.get(j).get(poles.get(j).size() - 1) == 1) {
+//                        from = j;
+//                        break;
+//                    }
+//                }
+//                if (isOdd) {
+//                    to = (from + 1) % 3; // A->C, C->B, B->A
+//                } else {
+//                    to = (from + 2) % 3; // A->B, B->C, C->A
+//                }
+//                poles.get(to).add(poles.get(from).remove(poles.get(from).size() - 1));
+//                moves.add("ABC".charAt(from) + "->" + "ABC".charAt(to));
+//            } else {
+//                // Move another disk (between the other two pegs)
+//                int smallestDiskPeg = -1;
+//                for (int j = 0; j < 3; j++) {
+//                    if (!poles.get(j).isEmpty() && poles.get(j).get(poles.get(j).size() - 1) == 1) {
+//                        smallestDiskPeg = j;
+//                        break;
+//                    }
+//                }
+//                int peg1 = (smallestDiskPeg + 1) % 3;
+//                int peg2 = (smallestDiskPeg + 2) % 3;
+//                // Choose source and destination based on disk sizes
+//                int from = -1, to = -1;
+//                if (poles.get(peg1).isEmpty()) {
+//                    from = peg2;
+//                    to = peg1;
+//                } else if (poles.get(peg2).isEmpty()) {
+//                    from = peg1;
+//                    to = peg2;
+//                } else {
+//                    int disk1 = poles.get(peg1).get(poles.get(peg1).size() - 1);
+//                    int disk2 = poles.get(peg2).get(poles.get(peg2).size() - 1);
+//                    if (disk1 < disk2) {
+//                        from = peg1;
+//                        to = peg2;
+//                    } else {
+//                        from = peg2;
+//                        to = peg1;
+//                    }
+//                }
+//                if (from != -1 && to != -1) {
+//                    poles.get(to).add(poles.get(from).remove(poles.get(from).size() - 1));
+//                    moves.add("ABC".charAt(from) + "->" + "ABC".charAt(to));
+//                }
+//            }
+//        }
+//        return moves;
+//    }
 
     private List<String> solve3PegIterative(int diskCount) {
         List<String> moves = new ArrayList<>();
-        int totalMoves = (1 << diskCount) - 1;
-        List<List<Integer>> poles = new ArrayList<>();
-        for (int i = 0; i < 3; i++) {
-            poles.add(new ArrayList<>());
-        }
-        for (int i = diskCount; i >= 1; i--) {
-            poles.get(0).add(i);
-        }
+        int totalMoves = (1 << diskCount) - 1; // 2^n - 1
+        String pegs = "ABC";
 
         for (int i = 1; i <= totalMoves; i++) {
-            if (i % 2 == 1) {
-                int from = 0, to = diskCount % 2 == 0 ? 1 : 2;
-                if (!poles.get(from).isEmpty() && (poles.get(to).isEmpty() || poles.get(to).get(poles.get(to).size() - 1) > 1)) {
-                    poles.get(to).add(poles.get(from).remove(poles.get(from).size() - 1));
-                    moves.add("A->" + (to == 1 ? "B" : "C"));
-                } else {
-                    from = to;
-                    to = 0;
-                    poles.get(to).add(poles.get(from).remove(poles.get(from).size() - 1));
-                    moves.add((from == 1 ? "B" : "C") + "->A");
-                }
-            } else {
-                int from = -1, to = -1;
-                for (int j = 0; j < 3; j++) {
-                    if (!poles.get(j).isEmpty() && poles.get(j).get(poles.get(j).size() - 1) != 1) {
-                        from = j;
-                        break;
-                    }
-                }
-                if (from != -1) {
-                    for (int j = 0; j < 3; j++) {
-                        if (j != from && (poles.get(j).isEmpty() || poles.get(j).get(poles.get(j).size() - 1) > poles.get(from).get(poles.get(from).size() - 1))) {
-                            to = j;
-                            break;
-                        }
-                    }
-                    if (to != -1) {
-                        poles.get(to).add(poles.get(from).remove(poles.get(from).size() - 1));
-                        moves.add("ABC".charAt(from) + "->" + "ABC".charAt(to));
-                    }
-                }
+            // Find the disk to move (smallest disk moves every odd move)
+            int disk = 0;
+            int moveNumber = i;
+            while ((moveNumber & 1) == 0) {
+                disk++;
+                moveNumber >>= 1;
             }
+            // For disk d, move direction depends on parity of (d + diskCount)
+            int from, to;
+            if ((disk + diskCount) % 2 == 0) {
+                // Clockwise: A->B, B->C, C->A
+                from = (disk % 3);
+                to = ((disk + 1) % 3);
+            } else {
+                // Counterclockwise: A->C, C->B, B->A
+                from = (disk % 3);
+                to = ((disk + 2) % 3);
+            }
+            moves.add(pegs.charAt(from) + "->" + pegs.charAt(to));
         }
         return moves;
     }
@@ -382,7 +555,12 @@ public class TowerOfHanoiService {
         for (int i = 0; i < iterations; i++) {
             long startTime = System.nanoTime();
             List<String> moves = new ArrayList<>();
-            solve4PegFrameStewart(diskCount, 0, 3, 1, 2, moves);
+            try {
+                solve4PegFrameStewart(diskCount, 0, 3, 1, 2, moves);
+            } catch (Exception e) {
+                logger.error("Error in solve4PegFrameStewart for diskCount={}: {}", diskCount, e.getMessage(), e);
+                throw e;
+            }
             long endTime = System.nanoTime();
             totalTime += (endTime - startTime);
         }
@@ -390,44 +568,55 @@ public class TowerOfHanoiService {
     }
 
     private void solve4PegFrameStewart(int n, int from, int to, int aux1, int aux2, List<String> moves) {
-        if (n == 0) return;
+        logger.debug("solve4PegFrameStewart: n={}, from={}, to={}, aux1={}, aux2={}", n, from, to, aux1, aux2);
+        if (n == 0) {
+            return;
+        }
         if (n == 1) {
-            moves.add("ABCD".charAt(from) + "->" + "ABCD".charAt(to));
+            String move = "ABCD".charAt(from) + "->" + "ABCD".charAt(to);
+            moves.add(move);
+            logger.debug("Added move: {}", move);
             return;
         }
 
-        if (n > 15) {
-            throw new IllegalArgumentException("Disk count too large for recursive solution");
+        // Validate peg indices
+        if (from < 0 || from > 3 || to < 0 || to > 3 || aux1 < 0 || aux1 > 3 || aux2 < 0 || aux2 > 3) {
+            throw new IllegalArgumentException("Invalid peg index: from=" + from + ", to=" + to + ", aux1=" + aux1 + ", aux2=" + aux2);
         }
 
-        int k = (int) (Math.sqrt(2 * n + 1) - 1);
-        solve4PegFrameStewart(n - k, from, aux1, aux2, to, moves);
-        solve3PegRecursive(k, from, to, aux2, moves);
-        solve4PegFrameStewart(n - k, aux1, to, from, aux2, moves);
-    }
+        // Optimized k calculation
+        int k = Math.max(1, (int) Math.round(Math.sqrt(2 * n))); // Ensure k is at least 1
+        if (k >= n) {
+            k = n - 1; // Prevent invalid recursion
+        }
+        logger.debug("Calculated k={} for n={}", k, n);
 
-//    private void savePerformanceMetrics(GameResult gameResult, Game game, String algorithmName, long executionTime) {
-//        Algorithm algorithm = algorithmRepository.findAll().stream()
-//                .filter(a -> a.getGameId() == game.getGameId() && a.getAlgorithmName().equals(algorithmName))
-//                .findFirst()
-//                .orElse(null);
-//        if (algorithm == null) {
-//            algorithm = new Algorithm();
-//            algorithm.setGameId(game.getGameId());
-//            algorithm.setAlgorithmName(algorithmName);
-//            algorithm.setDescription(algorithmName + " algorithm for Tower of Hanoi.");
-//            algorithm.setComplexityAnalysis(algorithmName.contains("Frame-Stewart") ? "O(2^sqrt(2n))" : "O(2^n)");
-//            algorithm = algorithmRepository.save(algorithm);
-//        }
-//
-//        PerformanceMetric metrics = new PerformanceMetric();
-//        metrics.setResultId(gameResult.getResultId());
-//        metrics.setAlgorithmId(algorithm.getAlgorithmId());
-//        metrics.setExecutionTimeMs((int) executionTime);
-//        metrics.setMemoryUsageKb(0);
-//        metrics.setCreatedAt(LocalDateTime.now());
-//        performanceMetricRepository.save(metrics);
-//    }
+        if (k < 0 || k > n) {
+            throw new IllegalStateException("Invalid k value: " + k + " for diskCount: " + n);
+        }
+
+        try {
+            // Move n-k disks to aux1 using all 4 pegs
+            solve4PegFrameStewart(n - k, from, aux1, aux2, to, moves);
+            // Map 4-peg indices to 3-peg indices for solve3PegRecursive
+            int[] pegMapping = new int[4]; // Maps 4-peg indices to 3-peg indices
+            pegMapping[from] = 0; // Map 'from' to A
+            pegMapping[to] = 1;   // Map 'to' to B
+            pegMapping[aux2] = 2; // Map 'aux2' to C
+            String pegLabels = "ABCD".substring(from, from + 1) +
+                    "ABCD".substring(to, to + 1) +
+                    "ABCD".substring(aux2, aux2 + 1);
+            logger.debug("3-Peg recursive call: k={}, from={}, to={}, aux2={}, pegLabels={}", k, from, to, aux2, pegLabels);
+            // Move k disks using 3 pegs (from, to, aux2)
+            solve3PegRecursive(k, 0, 1, 2, moves, pegLabels);
+            // Move n-k disks from aux1 to to using all 4 pegs
+            solve4PegFrameStewart(n - k, aux1, to, from, aux2, moves);
+        } catch (Exception e) {
+            logger.error("Error during recursive calls: n={}, k={}, from={}, to={}, aux1={}, aux2={}: {}",
+                    n, k, from, to, aux1, aux2, e.getMessage(), e);
+            throw e;
+        }
+    }
 
     private void savePerformanceMetrics(GameResult gameResult, Game game, String algorithmName, long executionTime) {
         Algorithm algorithm = algorithmRepository.findAll().stream()
@@ -451,5 +640,4 @@ public class TowerOfHanoiService {
         metrics.setCreatedAt(LocalDateTime.now());
         performanceMetricRepository.save(metrics);
     }
-
 }
