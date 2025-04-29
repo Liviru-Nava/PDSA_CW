@@ -13,7 +13,7 @@ public class EightQueensSolution {
     @Column(name = "game_id", nullable = false)
     private int gameId;
 
-    @Column(name = "configuration", nullable = false, unique = true)
+    @Column(name = "configuration", nullable = false)
     private String configuration;
 
     @Column(name = "is_recognized", nullable = false)
