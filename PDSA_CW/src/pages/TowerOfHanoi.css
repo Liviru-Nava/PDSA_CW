@@ -1,0 +1,192 @@
+
+/* Gradient background animation */
+@keyframes gradientShift {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+  }
+  
+  .animate-gradient {
+    background: linear-gradient(45deg, #1a1a40, #000000, #2a0a4a, #0a1a4a);
+    background-size: 300% 300%;
+    animation: gradientShift 12s ease infinite;
+  }
+  
+  /* Twinkle animation for stars */
+  @keyframes twinkle {
+    0% { opacity: 0.4; }
+    50% { opacity: 1; }
+    100% { opacity: 0.4; }
+  }
+  
+  .animate-twinkle {
+    animation: twinkle 2.5s infinite;
+  }
+  
+  /* Shooting star animation */
+  @keyframes shoot {
+    0% {
+      transform: translateX(0) translateY(0);
+      opacity: 1;
+    }
+    100% {
+      transform: translateX(120vw) translateY(120vh);
+      opacity: 0;
+    }
+  }
+  
+  .animate-shoot {
+    animation: shoot 1.5s linear infinite;
+  }
+  
+  /* Nebula drift animation */
+  @keyframes drift {
+    0% { transform: translateX(0) translateY(0); }
+    50% { transform: translateX(60px) translateY(20px); }
+    100% { transform: translateX(0) translateY(0); }
+  }
+  
+  .animate-drift {
+    animation: drift 18s ease-in-out infinite;
+  }
+  
+  /* Glow effect */
+  .shadow-glow {
+    box-shadow: 0 0 12px rgba(255, 255, 255, 0.8), 0 0 20px rgba(0, 212, 255, 0.5);
+  }
+  
+  /* Pulse animation for poles and held disk */
+  @keyframes pulse {
+    0% { box-shadow: 0 0 12px rgba(255, 215, 0, 0.8); }
+    50% { box-shadow: 0 0 24px rgba(255, 215, 0, 1); }
+    100% { box-shadow: 0 0 12px rgba(255, 215, 0, 0.8); }
+  }
+  
+  .animate-pulse {
+    animation: pulse 1.8s ease-in-out infinite;
+  }
+  
+  /* Shake animation for invalid moves */
+  @keyframes shake {
+    0% { transform: translateX(0); }
+    20% { transform: translateX(-8px); }
+    40% { transform: translateX(8px); }
+    60% { transform: translateX(-8px); }
+    80% { transform: translateX(8px); }
+    100% { transform: translateX(0); }
+  }
+  
+  .animate-shake {
+    animation: shake 0.4s ease-in-out;
+  }
+  
+  /* Pop animation for victory stars */
+  @keyframes pop {
+    0% { transform: scale(0); opacity: 0; }
+    50% { transform: scale(1.8); opacity: 1; }
+    100% { transform: scale(0.8); opacity: 0; }
+  }
+  
+  .animate-pop {
+    animation: pop 2.5s ease-out forwards;
+  }
+  
+  /* Bounce-in animation for modals */
+  @keyframes bounceIn {
+    0% { transform: scale(0.2); opacity: 0; }
+    50% { transform: scale(1.1); opacity: 1; }
+    80% { transform: scale(0.95); }
+    100% { transform: scale(1); }
+  }
+  
+  .animate-bounce-in {
+    animation: bounceIn 0.6s ease-out;
+  }
+  
+  /* Fade-in animation for tutorial */
+  @keyframes fadeIn {
+    0% { opacity: 0; }
+    100% { opacity: 1; }
+  }
+  
+  .animate-fade-in {
+    animation: fadeIn 0.5s ease-out;
+  }
+  
+  /* Responsive pole styling */
+  .pole-container {
+    width: 28vw;
+    max-width: 120px;
+  }
+  
+  @media (max-width: 768px) {
+    .pole-container {
+      width: 20vw;
+      max-width: 90px;
+    }
+    .pole-container .h-80 {
+      height: 65vh;
+    }
+    .pole-container .w-3 {
+      width: 2.5px;
+    }
+    .pole-container .h-7 {
+      height: 6vw;
+      min-height: 20px;
+    }
+  }
+  
+  @media (max-width: 480px) {
+    .pole-container {
+      width: 18vw;
+      max-width: 80px;
+    }
+    .pole-container .h-80 {
+      height: 55vh;
+    }
+    .pole-container .h-7 {
+      height: 5vw;
+      min-height: 18px;
+    }
+  }
+  
+  /* Font consistency */
+  body, input, select, textarea, button {
+    font-family: 'Montserrat', sans-serif;
+  }
+  
+  h1, h2, h3 {
+    font-family: 'Orbitron', sans-serif;
+  }
+  
+  /* Custom toast styles */
+  .Toastify__toast {
+    border-radius: 8px !important;
+    font-family: 'Montserrat', sans-serif !important;
+    font-size: 16px !important;
+    padding: 12px !important;
+    box-shadow: 0 0 12px rgba(0, 212, 255, 0.5) !important;
+  }
+  
+  .Toastify__toast--error {
+    background: #e53e3e !important;
+    border: 1px solid #feb2b2 !important;
+  }
+  
+  .Toastify__toast--success {
+    background: #38a169 !important;
+    border: 1px solid #68d391 !important;
+  }
+  
+  /* Input and button hover effects */
+  input, select, textarea {
+    transition: all 0.3s ease;
+  }
+  
+  input:focus, select:focus, textarea:focus {
+    transform: scale(1.02);
+  }
+  
+  button:hover {
+    box-shadow: 0 0 12px rgba(0, 212, 255, 0.7);
+  }
