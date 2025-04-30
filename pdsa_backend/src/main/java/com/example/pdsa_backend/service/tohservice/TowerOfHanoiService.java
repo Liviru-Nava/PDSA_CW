@@ -415,7 +415,12 @@ public class TowerOfHanoiService {
         }
         return totalTime / (iterations * 1_000);
     }
-
+    // n is the number of disks
+    // from is the peg moving from
+    // to is the peg to be moved
+    // aux is the other peg
+    // moves are the list of already made moves
+    // Peg labels for identifying the pegs
     private void solve3PegRecursive(int n, int from, int to, int aux, List<String> moves, String pegLabels) {
         if (n == 0) return;
         if (from < 0 || from >= pegLabels.length() || to < 0 || to >= pegLabels.length() || aux < 0 || aux >= pegLabels.length()) {
@@ -428,17 +433,6 @@ public class TowerOfHanoiService {
         solve3PegRecursive(n - 1, aux, to, from, moves, pegLabels);
     }
 
-    //    private long measureIterative3Peg(int diskCount) {
-//        long totalTime = 0;
-//        int iterations = 1000;
-//        for (int i = 0; i < iterations; i++) {
-//            long startTime = System.nanoTime();
-//            List<String> moves = solve3PegIterative(diskCount);
-//            long endTime = System.nanoTime();
-//            totalTime += (endTime - startTime);
-//        }
-//        return totalTime / (iterations * 1_000);
-//    }
     private long measureIterative3Peg(int diskCount) {
         long totalTime = 0;
         int iterations = 1000;
@@ -450,75 +444,6 @@ public class TowerOfHanoiService {
         }
         return totalTime / (iterations * 1_000);
     }
-//    private List<String> solve3PegIterative(int diskCount) {
-//        List<String> moves = new ArrayList<>();
-//        int totalMoves = (1 << diskCount) - 1; // 2^n - 1
-//        List<List<Integer>> poles = new ArrayList<>();
-//        for (int i = 0; i < 3; i++) {
-//            poles.add(new ArrayList<>());
-//        }
-//        for (int i = diskCount; i >= 1; i--) {
-//            poles.get(0).add(i); // Initialize source peg A with disks
-//        }
-//
-//        // For odd disk count, smallest disk moves A->C->B->A (counterclockwise).
-//        // For even disk count, smallest disk moves A->B->C->A (clockwise).
-//        boolean isOdd = diskCount % 2 == 1;
-//        for (int i = 1; i <= totalMoves; i++) {
-//            if (i % 2 == 1) {
-//                // Move smallest disk (disk 1)
-//                int from = -1, to = -1;
-//                for (int j = 0; j < 3; j++) {
-//                    if (!poles.get(j).isEmpty() && poles.get(j).get(poles.get(j).size() - 1) == 1) {
-//                        from = j;
-//                        break;
-//                    }
-//                }
-//                if (isOdd) {
-//                    to = (from + 1) % 3; // A->C, C->B, B->A
-//                } else {
-//                    to = (from + 2) % 3; // A->B, B->C, C->A
-//                }
-//                poles.get(to).add(poles.get(from).remove(poles.get(from).size() - 1));
-//                moves.add("ABC".charAt(from) + "->" + "ABC".charAt(to));
-//            } else {
-//                // Move another disk (between the other two pegs)
-//                int smallestDiskPeg = -1;
-//                for (int j = 0; j < 3; j++) {
-//                    if (!poles.get(j).isEmpty() && poles.get(j).get(poles.get(j).size() - 1) == 1) {
-//                        smallestDiskPeg = j;
-//                        break;
-//                    }
-//                }
-//                int peg1 = (smallestDiskPeg + 1) % 3;
-//                int peg2 = (smallestDiskPeg + 2) % 3;
-//                // Choose source and destination based on disk sizes
-//                int from = -1, to = -1;
-//                if (poles.get(peg1).isEmpty()) {
-//                    from = peg2;
-//                    to = peg1;
-//                } else if (poles.get(peg2).isEmpty()) {
-//                    from = peg1;
-//                    to = peg2;
-//                } else {
-//                    int disk1 = poles.get(peg1).get(poles.get(peg1).size() - 1);
-//                    int disk2 = poles.get(peg2).get(poles.get(peg2).size() - 1);
-//                    if (disk1 < disk2) {
-//                        from = peg1;
-//                        to = peg2;
-//                    } else {
-//                        from = peg2;
-//                        to = peg1;
-//                    }
-//                }
-//                if (from != -1 && to != -1) {
-//                    poles.get(to).add(poles.get(from).remove(poles.get(from).size() - 1));
-//                    moves.add("ABC".charAt(from) + "->" + "ABC".charAt(to));
-//                }
-//            }
-//        }
-//        return moves;
-//    }
 
     private List<String> solve3PegIterative(int diskCount) {
         List<String> moves = new ArrayList<>();

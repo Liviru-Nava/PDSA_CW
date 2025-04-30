@@ -59,7 +59,7 @@ public class EightQueensController {
     public ResponseEntity<String> computeForReport(@RequestBody ReportRequestDTO request) {
         eightQueensService.computeSolutionsForReport(
                 request.getGameId(),
-                request.getAlgorithmType().equals("Sequential") ? 1 : 2,
+                request.getAlgorithmType().equals("Sequential") ? 9 : 10,
                 request.getAlgorithmType(),
                 request.getRuns()
         );

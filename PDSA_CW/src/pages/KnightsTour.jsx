@@ -1804,10 +1804,10 @@ const ChessBoard = () => {
       })
       .map(([newX, newZ]) => [newX - halfSize, 0, newZ - halfSize]); // Convert back to board space
   };
-
+  // Start the game
   const startGame = () => {
-    const randX = Math.floor(Math.random() * boardSize);
-    const randZ = Math.floor(Math.random() * boardSize);
+    const randX = Math.floor(Math.random() * boardSize); // Generating random starting
+    const randZ = Math.floor(Math.random() * boardSize); // Position
 
     setStartPosition([randX, randZ]);
 

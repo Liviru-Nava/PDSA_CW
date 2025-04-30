@@ -8,13 +8,13 @@ const EightQueens = () => {
   // State variables
   const [username, setUsername] = useState(localStorage.getItem('eightQueensUsername') || '');
   const [playerId, setPlayerId] = useState(localStorage.getItem('eightQueensPlayerId') || null);
-  const [gameId, setGameId] = useState(1);
+  const [gameId, setGameId] = useState(4);
   const [board, setBoard] = useState(Array(8).fill(-1));
   const [message, setMessage] = useState('');
   const [isUserRegistered, setIsUserRegistered] = useState(!!localStorage.getItem('eightQueensUsername'));
   const [isLoading, setIsLoading] = useState(false);
   const [completionTimeSeconds, setCompletionTimeSeconds] = useState(0);
-  const [timerRunning, setTimerRunning] = useState(false);
+  const [timerRunning, setTimerRunning] = useState(true);
   const [reportData, setReportData] = useState(null);
   const [showReport, setShowReport] = useState(false);
   const [algorithmRuns, setAlgorithmRuns] = useState(5);
@@ -74,6 +74,21 @@ const EightQueens = () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
   }, [timerRunning]);
+
+  useEffect(() => {
+    fetch('http://localhost:8081/pdsa/eightqueens/compute/threaded/4/10', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    })
+      .then(response => {
+        console.log('API call completed with status:', response.status);
+      })
+      .catch(error => {
+        console.error('Error calling API:', error);
+      });
+  }, []);
 
   // Format time
   const formatTime = (seconds) => {

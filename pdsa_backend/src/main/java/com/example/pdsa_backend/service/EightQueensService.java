@@ -60,9 +60,9 @@ public class EightQueensService {
 
     public void computeSolutionsSequential(int gameId, int algorithmId) {
         long startTime = System.currentTimeMillis();
-        List<int[]> solutions = new ArrayList<>();
-        int[] board = new int[BOARD_SIZE];
-        solveSequential(board, 0, solutions);
+        List<int[]> solutions = new ArrayList<>(); // => save all the correct responses
+        int[] board = new int[BOARD_SIZE]; // to save the correct response
+        solveSequential(board, 0, solutions); // this is the actual algorithm
         if (!solutionRepository.existsByGameId(gameId)) {
             saveSolutions(solutions, gameId, algorithmId, startTime);
         } else {
@@ -76,7 +76,7 @@ public class EightQueensService {
     public void computeSolutionsThreaded(int gameId, int algorithmId) {
         long startTime = System.currentTimeMillis();
         List<int[]> solutions = new CopyOnWriteArrayList<>();
-        ExecutorService executor = Executors.newFixedThreadPool(4);
+        ExecutorService executor = Executors.newFixedThreadPool(8);
         for (int i = 0; i < BOARD_SIZE; i++) {
             final int firstQueen = i;
             executor.submit(() -> {
@@ -133,8 +133,8 @@ public class EightQueensService {
     }
 
     public AverageReportResponseDTO getAverageReportData() {
-        Double sequentialAvg = algorithmRunRepository.findAverageExecutionTimeByAlgorithmId(1);
-        Double threadedAvg = algorithmRunRepository.findAverageExecutionTimeByAlgorithmId(2);
+        Double sequentialAvg = algorithmRunRepository.findAverageExecutionTimeByAlgorithmId(9);
+        Double threadedAvg = algorithmRunRepository.findAverageExecutionTimeByAlgorithmId(10);
         return new AverageReportResponseDTO() {{
             setSequentialAverageMs(sequentialAvg != null ? sequentialAvg : 0.0);
             setThreadedAverageMs(threadedAvg != null ? threadedAvg : 0.0);
@@ -195,6 +195,8 @@ public class EightQueensService {
 
     private void solveSequential(int[] board, int row, List<int[]> solutions) {
         if (row == BOARD_SIZE) {
+            // base case if the last row then return the board so we are in the 8th
+            // index row meaning 9th row so all the queens have been placed successfully
             solutions.add(board.clone());
             return;
         }
@@ -205,10 +207,13 @@ public class EightQueensService {
             }
         }
     }
-
     private boolean isSafe(int[] board, int row, int col) {
         for (int i = 0; i < row; i++) {
             int placedCol = board[i];
+            // placedCol == col checks if the current colum is already taken by a position in the sequence
+            // Math.abs(placedCol - col) == Math.abs(i - row) checks if the queens diagnol to any other queen by checking
+            // the x1 - x2 == y1 - y2
+            // diagnol means need to go left or right and up or down same number of squares
             if (placedCol == col || Math.abs(placedCol - col) == Math.abs(i - row)) {
                 return false;
             }

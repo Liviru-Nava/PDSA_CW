@@ -211,7 +211,7 @@ class KnightsTourWarnsdorffsTest {
             boolean result = knightsTour.solveKnightsTour(startX, startY);
             assertFalse(result);
         } catch (TimeoutException e) {
-            // Consider timeout as a failure to solve as well
+            // Consider timeout as a failure to solve as well considering a small board size
             fail("Got a timeout exception instead of false result");
         }
     }
