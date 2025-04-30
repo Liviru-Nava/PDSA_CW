@@ -44,8 +44,15 @@ public class EightQueensService {
     private PlayerRepository playerRepository;
 
     public PlayerResponseDTO createPlayer(PlayerRequestDTO request) {
+
         if (playerRepository.findByUsername(request.getUsername()).isPresent()) {
-            throw new IllegalArgumentException("Username already exists.");
+            Player player = playerRepository.findByUsername(request.getUsername()).get();
+            return new PlayerResponseDTO() {{
+                setPlayerId(player.getPlayerId());
+                setUsername(player.getUsername());
+                setMessage("Player created successfully.");
+            }};
+//            throw new IllegalArgumentException("Username already exists.");
         }
         Player player = new Player();
         player.setUsername(request.getUsername());
