@@ -566,13 +566,13 @@ public class TSPService {
                 // Set algorithm ID based on algorithm name
                 switch (solution.getAlgorithmName()) {
                     case "Brute Force":
-                        metric.setAlgorithmId(1);
+                        metric.setAlgorithmId(3);
                         break;
                     case "Held-Karp (Dynamic Programming)":
-                        metric.setAlgorithmId(2);
+                        metric.setAlgorithmId(4);
                         break;
                     case "Nearest Neighbor":
-                        metric.setAlgorithmId(3);
+                        metric.setAlgorithmId(5);
                         break;
                     default:
                         continue; // Skip unknown algorithms
