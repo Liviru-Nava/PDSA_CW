@@ -251,6 +251,8 @@ public class KnightsTourService {
     }
 
     public PlayerGameResult saveGameResult(PlayerGameResult gameResult) {
+        validateKnightsTourGame(gameResult);
+
         // Convert DTO to entity
         int playerId = getOrCreatePlayer(gameResult.getUsername());
         GameResult result = new GameResult();
@@ -443,5 +445,111 @@ public class KnightsTourService {
 
         System.out.println("Returned "+latestResults.size()+" performance metrics for player "+username+" with player id "+player.getPlayerId()+" for game "+gameName);
         return new ArrayList<>(metricsMap.values());
+    }
+
+    private void validateKnightsTourGame(PlayerGameResult gameResult) {
+        StringBuilder errors = new StringBuilder();
+        int boardSize = gameResult.getBoardSize();
+        int[][] board = gameResult.getBoard();
+        int startX = gameResult.getStartX();
+        int startY = gameResult.getStartY();
+
+        // 1. Validate board dimensions
+        if (board == null || board.length != boardSize) {
+            throw new InvalidParameterException("Invalid board dimensions");
+        }
+
+        for (int[] row : board) {
+            if (row == null || row.length != boardSize) {
+                throw new InvalidParameterException("Invalid board dimensions");
+            }
+        }
+
+        // 2. Validate starting position is within board boundaries
+        if (startX < 0 || startX >= boardSize || startY < 0 || startY >= boardSize) {
+            errors.append("Starting position (").append(startX).append(",").append(startY)
+                    .append(") is outside board boundaries. ");
+        }
+
+        // 3. Check if all values from 0 to (boardSize²-1) are present
+        boolean[] valuePresent = new boolean[boardSize * boardSize];
+        for (int i = 0; i < boardSize; i++) {
+            for (int j = 0; j < boardSize; j++) {
+                int value = board[i][j];
+                if (value < 0 || value >= boardSize * boardSize) {
+                    errors.append("Invalid move value ").append(value)
+                            .append(" at position (").append(i).append(",").append(j).append("). ");
+                } else {
+                    valuePresent[value] = true;
+                }
+            }
+        }
+
+        // Check if any value is missing
+        for (int i = 0; i < valuePresent.length; i++) {
+            if (!valuePresent[i]) {
+                errors.append("Value ").append(i).append(" is missing from the board. ");
+            }
+        }
+
+        // 4. Validate that moves follow knight's move pattern
+        int[][] moves = reconstructMoves(board, boardSize);
+        int[] dx = {2, 1, -1, -2, -2, -1, 1, 2};
+        int[] dy = {1, 2, 2, 1, -1, -2, -2, -1};
+
+        for (int i = 0; i < moves.length - 1; i++) {
+            int r1 = moves[i][0];
+            int c1 = moves[i][1];
+            int r2 = moves[i+1][0];
+            int c2 = moves[i+1][1];
+
+            boolean validMove = false;
+            for (int k = 0; k < 8; k++) {
+                if (r1 + dx[k] == r2 && c1 + dy[k] == c2) {
+                    validMove = true;
+                    break;
+                }
+            }
+
+            if (!validMove) {
+                errors.append("Invalid knight move from position (").append(r1).append(",").append(c1)
+                        .append(") to (").append(r2).append(",").append(c2).append("). ");
+            }
+        }
+
+        // 5. Validate first move matches startX and startY
+        if (moves.length > 0) {
+            int firstMoveRow = moves[0][0];
+            int firstMoveCol = moves[0][1];
+            if (firstMoveRow != startX || firstMoveCol != startY) {
+                errors.append("First move (").append(firstMoveRow).append(",").append(firstMoveCol)
+                        .append(") doesn't match specified starting position (")
+                        .append(startX).append(",").append(startY).append("). ");
+            }
+        }
+
+        // Throw exception if any validation errors are found
+        if (!errors.isEmpty()) {
+            throw new InvalidParameterException(errors.toString().trim());
+        }
+    }
+    /**
+     * Reconstructs the sequence of moves from the board
+     * @param board the knight's tour board
+     * @param boardSize size of the board
+     * @return array of [row, col] positions in order of moves
+     */
+    private int[][] reconstructMoves(int[][] board, int boardSize) {
+        int[][] moves = new int[boardSize * boardSize][2];
+
+        // Find the coordinates for each move number
+        for (int i = 0; i < boardSize; i++) {
+            for (int j = 0; j < boardSize; j++) {
+                int moveNumber = board[i][j];
+                moves[moveNumber] = new int[]{i, j};
+            }
+        }
+
+        return moves;
     }
 }
